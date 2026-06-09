@@ -556,6 +556,8 @@ function setMode(m){
   document.getElementById('mode-replace').classList.toggle('active', m==='replace');
 }
 
+let currentFileName = '';
+
 function onDrop(e){
   e.preventDefault();
   document.getElementById('drop-zone').classList.remove('drag');
@@ -564,10 +566,28 @@ function onDrop(e){
 }
 function onFileSelect(e){ const f=e.target.files[0]; if(f) processFile(f); e.target.value=''; }
 
+/* 파일명에서 업체명 추출: "구씨네청과_공급리스트_1.xls" → "구씨네청과" */
+function extractVendorFromFilename(filename){
+  const base = filename.replace(/\.[^.]+$/, '');
+  const part = base.split(/[_\-\s]/)[0].trim();
+  return part || base;
+}
+
+/* 헤더 행 자동 탐지: 상품명/공급가 등 키워드가 있는 첫 번째 행 */
+function detectHeaderRow(json){
+  const keys = ['상품','품목','공급가','가격','단가','name','price','item','코드','비고'];
+  for (let i = 0; i < Math.min(json.length, 8); i++){
+    const row = json[i].map(c => String(c||'').toLowerCase());
+    if (keys.some(k => row.some(cell => cell.includes(k)))) return i;
+  }
+  return 0;
+}
+
 function processFile(file){
   if (file.size > 10*1024*1024){ showToast('파일이 너무 큽니다 (최대 10MB)', true); return; }
   const ext = file.name.split('.').pop().toLowerCase();
   if (!['xlsx','xls','csv'].includes(ext)){ showToast('.xlsx .xls .csv 파일만 지원합니다', true); return; }
+  currentFileName = file.name;
   const reader = new FileReader();
   reader.onload = e => {
     try{
@@ -585,48 +605,104 @@ function processFile(file){
 }
 
 function renderPreview(json){
-  const cols = Math.max(...json.slice(0,8).map(r => r.length));
-  let h = '<table class="ptbl"><thead><tr>' + json[0].map(c => `<th>${c||'(빈열)'}</th>`).join('') + '</tr></thead><tbody>';
-  json.slice(1,7).forEach(row => { h += '<tr>' + Array.from({length:cols},(_,i) => `<td>${row[i]??''}</td>`).join('') + '</tr>'; });
-  if (json.length > 7) h += `<tr><td colspan="${cols}" style="text-align:center;color:#999;font-size:11px">... 외 ${json.length-7}행</td></tr>`;
+  const hRow = detectHeaderRow(json);
+  const header = json[hRow];
+  const cols = Math.max(...json.slice(hRow, hRow+8).map(r => r.length));
+  let h = '<table class="ptbl"><thead><tr>' + header.map(c => `<th>${c||'(빈열)'}</th>`).join('') + '</tr></thead><tbody>';
+  json.slice(hRow+1, hRow+7).forEach(row => {
+    h += '<tr>' + Array.from({length:cols},(_,i) => `<td>${row[i]??''}</td>`).join('') + '</tr>';
+  });
+  const dataRows = json.length - hRow - 1;
+  if (dataRows > 6) h += `<tr><td colspan="${cols}" style="text-align:center;color:#999;font-size:11px">... 외 ${dataRows-6}행</td></tr>`;
   h += '</tbody></table>';
   document.getElementById('preview-wrap').innerHTML = h;
-  document.getElementById('preview-info').textContent = `총 ${json.length-1}개 행 감지됨 — 첫 번째 행은 헤더(업체명/품목명/단위/공급가/비고)로 자동 처리됩니다.`;
+
+  /* 업체명 컬럼 없으면 파일명에서 추출 안내 */
+  const headerLow = header.map(c => String(c||'').toLowerCase());
+  const hasVendorCol = ['업체','vendor','거래처','공급사'].some(k => headerLow.some(h => h.includes(k)));
+  const autoVendor = extractVendorFromFilename(currentFileName);
+  const vendorNote = hasVendorCol
+    ? '업체명 열이 감지되었습니다.'
+    : `업체명 열 없음 → 파일명에서 "<b>${autoVendor}</b>"(으)로 자동 적용됩니다.`;
+  document.getElementById('preview-info').innerHTML =
+    `총 ${dataRows}개 행 감지됨 &nbsp;|&nbsp; ${vendorNote}`;
 }
 
 async function importData(){
   if (!parsedRows){ showToast('파일을 먼저 업로드해주세요', true); return; }
-  const header = parsedRows[0].map(h => String(h||'').trim().toLowerCase());
+
+  const hRow = detectHeaderRow(parsedRows);
+  const header = parsedRows[hRow].map(h => String(h||'').trim().toLowerCase());
   const find = (...keys) => { for(const k of keys){ const i=header.findIndex(h=>h.includes(k)); if(i>=0) return i; } return -1; };
-  const cV = find('업체','vendor','거래처','공급사');
-  const cN = find('품목','상품','제품','name','item');
-  const cU = find('단위','unit');
-  const cP = find('공급가','가격','단가','price');
+
+  const cV  = find('업체','vendor','거래처','공급사');
+  const cN  = find('상품명','품목명','품목','상품','제품','name','item');
+  const cSz = find('사이즈','size','규격');
+  const cOp = find('옵션','option','용량');
+  const cU  = find('단위','unit');
+  const cP  = find('공급가','가격','단가','price');
   const cNo = find('비고','note','메모','remark');
-  if (cV<0 || cN<0){ showToast('업체명 또는 품목명 열을 찾을 수 없습니다. 헤더를 확인해주세요.', true); return; }
+
+  if (cN < 0){ showToast('품목명 열을 찾을 수 없습니다. 헤더를 확인해주세요.', true); return; }
+
+  /* 업체명 컬럼 없으면 파일명에서 추출 */
+  const autoVendor = extractVendorFromFilename(currentFileName);
+
   const btn = document.getElementById('import-btn');
   btn.disabled = true; btn.textContent = '가져오는 중...';
-  const rows = parsedRows.slice(1).filter(r => String(r[cV]||'').trim() && String(r[cN]||'').trim());
+
+  /* 헤더 다음 행부터, 품목명이 있는 행만 */
+  const rows = parsedRows.slice(hRow+1).filter(r => String(r[cN]||'').trim());
+
   if (!rows.length){ showToast('가져올 데이터가 없습니다', true); btn.disabled=false; btn.textContent='📥 가져오기'; return; }
+
+  /* 병합 모드: 기존 데이터 절대 삭제 안 함 */
+  /* 교체 모드만 삭제 */
   if (importMode === 'replace') items = [];
+
   let added=0, updated=0;
   const newV = [];
+
   rows.forEach(row => {
-    const vendor = String(row[cV]||'').trim();
+    const vendor = cV >= 0 ? String(row[cV]||'').trim() : autoVendor;
     const name   = String(row[cN]||'').trim();
-    const unit   = cU>=0 ? String(row[cU]||'').trim() : '개';
-    const pRaw   = cP>=0 ? row[cP] : '';
-    const price  = pRaw===''||pRaw==null ? null : Math.round(parseFloat(String(pRaw).replace(/[^0-9.]/g,'')))||null;
-    const note   = cNo>=0 ? String(row[cNo]||'').trim() : '';
+    if (!name) return;
+
+    /* 단위: 단위 컬럼 > 사이즈+옵션 조합 > 옵션 > '개' */
+    let unit = '';
+    if (cU >= 0 && String(row[cU]||'').trim()) {
+      unit = String(row[cU]).trim();
+    } else {
+      const sz = cSz>=0 ? String(row[cSz]||'').trim() : '';
+      const op = cOp>=0 ? String(row[cOp]||'').trim() : '';
+      unit = [sz, op].filter(Boolean).join(' / ') || '개';
+    }
+
+    const pRaw  = cP >= 0 ? row[cP] : '';
+    const price = pRaw===''||pRaw==null ? null : Math.round(parseFloat(String(pRaw).replace(/[^0-9.]/g,'')))||null;
+    const note  = cNo >= 0 ? String(row[cNo]||'').trim() : '';
+
     if (!vendors.includes(vendor) && !newV.includes(vendor)) newV.push(vendor);
-    const ex = importMode==='merge' ? items.find(it => it.vendor===vendor && it.name===name) : null;
-    if (ex){ if(unit) ex.unit=unit; if(price!=null) ex.price=price; if(note) ex.note=note; updated++; }
-    else { items.push({id:uid(), vendor, name, unit, price, note}); added++; }
+
+    /* 병합: 같은 업체 + 품목명 + 단위가 완전히 같을 때만 업데이트, 아니면 추가 */
+    const ex = importMode==='merge'
+      ? items.find(it => it.vendor===vendor && it.name===name && it.unit===unit && (it.note||'')===(note||''))
+      : null;
+
+    if (ex){
+      if (price != null) ex.price = price;
+      if (note) ex.note = note;
+      updated++;
+    } else {
+      items.push({id:uid(), vendor, name, unit, price, note});
+      added++;
+    }
   });
+
   newV.forEach(v => { if (!vendors.includes(v)) vendors.push(v); });
   await saveData(); renderAll();
   btn.disabled=false; btn.textContent='📥 가져오기';
-  showToast(`완료: 신규 ${added}개 추가, ${updated}개 업데이트${newV.length?` / 업체 ${newV.length}개 자동 등록`:''}`);
+  showToast(`완료: 신규 ${added}개 추가, ${updated}개 업데이트${newV.length?` / 업체 "${newV.join(', ')}" 자동 등록`:''}`);
   cancelUpload();
   switchTab('compare', document.querySelectorAll('.tab')[0]);
 }
