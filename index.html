@@ -656,11 +656,9 @@ async function importData(){
 
   if (!rows.length){ showToast('가져올 데이터가 없습니다', true); btn.disabled=false; btn.textContent='📥 가져오기'; return; }
 
-  /* 병합 모드: 기존 데이터 절대 삭제 안 함 */
-  /* 교체 모드만 삭제 */
   if (importMode === 'replace') items = [];
 
-  let added=0, updated=0;
+  let added = 0;
   const newV = [];
 
   rows.forEach(row => {
@@ -668,7 +666,6 @@ async function importData(){
     const name   = String(row[cN]||'').trim();
     if (!name) return;
 
-    /* 단위: 단위 컬럼 > 사이즈+옵션 조합 > 옵션 > '개' */
     let unit = '';
     if (cU >= 0 && String(row[cU]||'').trim()) {
       unit = String(row[cU]).trim();
@@ -684,25 +681,14 @@ async function importData(){
 
     if (!vendors.includes(vendor) && !newV.includes(vendor)) newV.push(vendor);
 
-    /* 병합: 같은 업체 + 품목명 + 단위가 완전히 같을 때만 업데이트, 아니면 추가 */
-    const ex = importMode==='merge'
-      ? items.find(it => it.vendor===vendor && it.name===name && it.unit===unit && (it.note||'')===(note||''))
-      : null;
-
-    if (ex){
-      if (price != null) ex.price = price;
-      if (note) ex.note = note;
-      updated++;
-    } else {
-      items.push({id:uid(), vendor, name, unit, price, note});
-      added++;
-    }
+    items.push({id:uid(), vendor, name, unit, price, note});
+    added++;
   });
 
   newV.forEach(v => { if (!vendors.includes(v)) vendors.push(v); });
   await saveData(); renderAll();
   btn.disabled=false; btn.textContent='📥 가져오기';
-  showToast(`완료: 신규 ${added}개 추가, ${updated}개 업데이트${newV.length?` / 업체 "${newV.join(', ')}" 자동 등록`:''}`);
+  showToast(`완료: ${added}개 추가${newV.length?' / 업체 "'+newV.join(', ')+'" 자동 등록':''}`);
   cancelUpload();
   switchTab('compare', document.querySelectorAll('.tab')[0]);
 }
