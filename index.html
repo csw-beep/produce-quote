@@ -374,21 +374,16 @@ function resetFilters(){
   renderAll();
 }
 
-function filteredItems(){
-  // Update filter dropdowns
+function updateDropdowns(){
   const fv = document.getElementById('filter-vendor');
   const fn = document.getElementById('filter-name');
   const fu = document.getElementById('filter-unit');
-  if(fv){
-    const selV=fv.value; fv.innerHTML='<option value="">전체 업체</option>'+[...new Set(items.map(i=>i.vendor))].sort().map(v=>`<option value="${v}"${v===selV?' selected':''}>${v}</option>`).join('');
-  }
-  if(fn){
-    const selN=fn.value; fn.innerHTML='<option value="">전체 품목</option>'+[...new Set(items.map(i=>i.name))].sort().map(v=>`<option value="${v}"${v===selN?' selected':''}>${v}</option>`).join('');
-  }
-  if(fu){
-    const selU=fu.value; fu.innerHTML='<option value="">전체 단위</option>'+[...new Set(items.map(i=>i.unit||''))].filter(Boolean).sort().map(v=>`<option value="${v}"${v===selU?' selected':''}>${v}</option>`).join('');
-  }
+  if(fv) fv.innerHTML='<option value="">전체 업체</option>'+[...new Set(items.map(i=>i.vendor))].sort().map(v=>`<option value="${v}"${v===filterVendor?' selected':''}>${v}</option>`).join('');
+  if(fn) fn.innerHTML='<option value="">전체 품목</option>'+[...new Set(items.map(i=>i.name))].sort().map(v=>`<option value="${v}"${v===filterName?' selected':''}>${v}</option>`).join('');
+  if(fu) fu.innerHTML='<option value="">전체 단위</option>'+[...new Set(items.map(i=>i.unit||'')).values()].filter(Boolean).sort().map(v=>`<option value="${v}"${v===filterUnit?' selected':''}>${v}</option>`).join('');
+}
 
+function filteredItems(){
   let result = items.filter(it => {
     if(searchQ){
       const q=searchQ.toLowerCase();
@@ -411,6 +406,7 @@ function filteredItems(){
 }
 
 function renderAll(){
+  updateDropdowns();
   renderStats(); renderTable(); renderVendors(); renderWinnerList();
   renderAddForm(); renderManageList(); renderVendorSettings();
 }
