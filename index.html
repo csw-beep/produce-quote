@@ -91,6 +91,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:#222;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .note-cell{font-size:12px;color:#888;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.filter-select{height:32px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;padding:0 10px;cursor:pointer;outline:none}
+.filter-select:focus{border-color:#3B6D11}
+.sort-btn{height:32px;padding:0 10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.sort-btn:hover{background:#f5f5f5}
+.sort-btn.active{border-color:#3B6D11;color:#3B6D11;background:#f0f7e8}
+.filter-reset{height:32px;padding:0 10px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;cursor:pointer}
+.filter-reset:hover{background:#fef2f2}
+
 .editable{cursor:pointer;border-radius:4px;padding:1px 3px;transition:background .15s}
 .editable:hover{background:#f0f7e8;outline:1px dashed #3B6D11}
 .edit-input{font-size:13px;border:1.5px solid #3B6D11;border-radius:6px;padding:3px 7px;outline:none;background:#fff;color:#111;width:100%;box-sizing:border-box}
@@ -133,6 +142,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="stats-grid" id="stats"></div>
   <div class="card">
     <div class="card-title">품목별 가격 비교 <span class="result-count" id="result-count"></span></div>
+    <div class="filter-bar">
+      <select class="filter-select" id="filter-vendor" onchange="applyFilters()">
+        <option value="">전체 업체</option>
+      </select>
+      <select class="filter-select" id="filter-name" onchange="applyFilters()">
+        <option value="">전체 품목</option>
+      </select>
+      <select class="filter-select" id="filter-unit" onchange="applyFilters()">
+        <option value="">전체 단위</option>
+      </select>
+      <button class="sort-btn" id="sort-price" onclick="toggleSort('price')">공급가 ↕</button>
+      <button class="sort-btn" id="sort-name" onclick="toggleSort('name')">품목명 ↕</button>
+      <button class="sort-btn" id="sort-vendor" onclick="toggleSort('vendor')">업체명 ↕</button>
+      <button class="filter-reset" onclick="resetFilters()">✕ 초기화</button>
+    </div>
     <div class="tbl-wrap">
       <table class="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
     </div>
@@ -249,6 +273,7 @@ const DEF_ITEMS = [
 ];
 
 const VBC = ['vb0','vb1','vb2','vb3','vb4'];
+let filterVendor='', filterName='', filterUnit='', sortField='', sortDir=1;
 let vendors = [...DEF_VENDORS];
 let items = DEF_ITEMS.map(i => ({...i}));
 let searchQ = '';
@@ -318,15 +343,71 @@ async function resetData(){
 
 function applySearch(){ searchQ = document.getElementById('search').value.trim(); renderAll(); }
 
+function applyFilters(){
+  filterVendor = document.getElementById('filter-vendor')?.value || '';
+  filterName   = document.getElementById('filter-name')?.value || '';
+  filterUnit   = document.getElementById('filter-unit')?.value || '';
+  renderAll();
+}
+
+function toggleSort(field){
+  if(sortField===field){ sortDir *= -1; }
+  else { sortField=field; sortDir=1; }
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('sort-'+field);
+  if(btn){
+    btn.classList.add('active');
+    btn.textContent = (field==='price'?'공급가':field==='name'?'품목명':'업체명') + (sortDir===1?' ↑':' ↓');
+  }
+  renderAll();
+}
+
+function resetFilters(){
+  filterVendor=''; filterName=''; filterUnit=''; sortField=''; sortDir=1;
+  document.getElementById('filter-vendor').value='';
+  document.getElementById('filter-name').value='';
+  document.getElementById('filter-unit').value='';
+  document.querySelectorAll('.sort-btn').forEach(b=>{ b.classList.remove('active'); });
+  document.getElementById('sort-price').textContent='공급가 ↕';
+  document.getElementById('sort-name').textContent='품목명 ↕';
+  document.getElementById('sort-vendor').textContent='업체명 ↕';
+  renderAll();
+}
+
 function filteredItems(){
-  if (!searchQ) return items;
-  const q = searchQ.toLowerCase();
-  return items.filter(it =>
-    it.name.toLowerCase().includes(q) ||
-    it.vendor.toLowerCase().includes(q) ||
-    (it.unit && it.unit.toLowerCase().includes(q)) ||
-    (it.note && it.note.toLowerCase().includes(q))
-  );
+  // Update filter dropdowns
+  const fv = document.getElementById('filter-vendor');
+  const fn = document.getElementById('filter-name');
+  const fu = document.getElementById('filter-unit');
+  if(fv){
+    const selV=fv.value; fv.innerHTML='<option value="">전체 업체</option>'+[...new Set(items.map(i=>i.vendor))].sort().map(v=>`<option value="${v}"${v===selV?' selected':''}>${v}</option>`).join('');
+  }
+  if(fn){
+    const selN=fn.value; fn.innerHTML='<option value="">전체 품목</option>'+[...new Set(items.map(i=>i.name))].sort().map(v=>`<option value="${v}"${v===selN?' selected':''}>${v}</option>`).join('');
+  }
+  if(fu){
+    const selU=fu.value; fu.innerHTML='<option value="">전체 단위</option>'+[...new Set(items.map(i=>i.unit||''))].filter(Boolean).sort().map(v=>`<option value="${v}"${v===selU?' selected':''}>${v}</option>`).join('');
+  }
+
+  let result = items.filter(it => {
+    if(searchQ){
+      const q=searchQ.toLowerCase();
+      if(!( it.name.toLowerCase().includes(q)||it.vendor.toLowerCase().includes(q)||(it.unit&&it.unit.toLowerCase().includes(q))||(it.note&&it.note.toLowerCase().includes(q)) )) return false;
+    }
+    if(filterVendor && it.vendor!==filterVendor) return false;
+    if(filterName   && it.name!==filterName)     return false;
+    if(filterUnit   && (it.unit||'')!==filterUnit) return false;
+    return true;
+  });
+
+  if(sortField){
+    result = [...result].sort((a,b)=>{
+      let av = a[sortField], bv = b[sortField];
+      if(sortField==='price'){ av=av??Infinity; bv=bv??Infinity; return (av-bv)*sortDir; }
+      return String(av||'').localeCompare(String(bv||''),'ko')*sortDir;
+    });
+  }
+  return result;
 }
 
 function renderAll(){
@@ -368,12 +449,11 @@ function renderTable(){
   const rc = document.getElementById('result-count');
 
   thead.innerHTML = `<tr>
-    <th style="width:16%">업체명</th>
-    <th style="width:18%">품목명</th>
-    <th style="width:9%">단위</th>
-    <th style="width:15%">공급가</th>
-    <th style="width:14%">최저가 여부</th>
-    <th style="width:20%">비고</th>
+    <th style="width:18%">업체명</th>
+    <th style="width:20%">품목명</th>
+    <th style="width:10%">단위</th>
+    <th style="width:16%">공급가</th>
+    <th style="width:28%">비고</th>
     <th style="width:8%"></th>
   </tr>`;
 
@@ -392,7 +472,6 @@ function renderTable(){
     const vIdx = vendors.indexOf(it.vendor);
     const vClass = VBC[vIdx >= 0 ? vIdx % VBC.length : 0];
     const isMin = it.price!=null && it.price!=='' && minMap[it.name]===it.price;
-    const cnt = items.filter(i => i.name===it.name && i.price!=null && i.price!=='').length;
     const priceDisplay = it.price!=null&&it.price!==''
       ? `<span${isMin?' class="best-tag"':''}>${fmt(it.price)}</span>`
       : '<span style="color:#ccc">-</span>';
