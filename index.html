@@ -476,7 +476,6 @@ function renderTable(){
       <td style="font-weight:600"><span class="editable" onclick="startEdit('${it.id}','name',this,'${it.name.replace(/'/g,"\'")}',false)">${hl(it.name,q)}</span></td>
       <td><span class="editable" style="color:#999;font-size:12px" onclick="startEdit('${it.id}','unit',this,'${(it.unit||'').replace(/'/g,"\'")}',false)">${it.unit||'<span style=color:#ddd>-</span>'}</span></td>
       <td><span class="editable" onclick="startEditPrice('${it.id}',this,${it.price!=null?it.price:'null'})">${priceDisplay}</span></td>
-      <td>${isMin && cnt>1 ? '<span style="font-size:12px;color:#3B6D11;font-weight:600">✓ 최저가</span>' : '<span style="color:#ccc">—</span>'}</td>
       <td><span class="editable note-cell" title="${it.note||''}" onclick="startEdit('${it.id}','note',this,'${(it.note||'').replace(/'/g,"\'")}',false)">${it.note ? hl(it.note,q) : '<span style=color:#ddd>비고 입력</span>'}</span></td>
       <td><button class="row-del" onclick="deleteItem('${it.id}')" title="삭제">✕</button></td>
     </tr>`;
