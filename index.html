@@ -211,6 +211,34 @@ body {
 .quote-scope .toast {position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:#222;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
 .quote-scope .toast.show {opacity:1;transform:translateX(-50%) translateY(0)}
 .quote-scope .note-cell {font-size:12px;color:#888;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quote-scope .product-cards {display:flex;flex-direction:column;gap:10px}
+.quote-scope .product-card {border:1px solid #eee;border-radius:12px;overflow:hidden;background:#fff}
+.quote-scope .pc-head {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 14px;background:#fafafa;border-bottom:1px solid #f0f0f0}
+.quote-scope .pc-head-main {display:flex;align-items:baseline;gap:8px}
+.quote-scope .pc-name {font-size:15px;font-weight:700;color:#111}
+.quote-scope .pc-head-meta {display:flex;align-items:center;gap:8px;font-size:11.5px;color:#999}
+.quote-scope .pc-vendor-count {white-space:nowrap}
+.quote-scope .pc-unit-section {border-bottom:1px solid #f0f0f0}
+.quote-scope .pc-unit-section:last-child {border-bottom:none}
+.quote-scope .pc-unit-head {display:flex;align-items:center;gap:8px;padding:9px 14px 5px}
+.quote-scope .pc-unit-badge {font-size:11.5px;font-weight:700;color:#3B6D11;background:#EAF3DE;padding:3px 9px;border-radius:6px}
+.quote-scope .pc-unit-meta {font-size:11.5px;color:#999}
+.quote-scope .pc-body {display:flex;flex-direction:column;padding-bottom:4px}
+.quote-scope .pc-row {display:grid;grid-template-columns:110px 1fr 1fr 28px;align-items:center;gap:10px;padding:7px 14px 7px 26px;transition:background .12s}
+.quote-scope .pc-row:hover {background:#fafafa}
+.quote-scope .pc-row:hover .row-del {opacity:1}
+.quote-scope .pc-row-best {background:#F7FBF1}
+.quote-scope .pc-row-best:hover {background:#F1F8E8}
+.quote-scope .pc-row-mid {display:flex;align-items:center;gap:8px}
+.quote-scope .pc-price {font-size:14px;font-weight:600;color:#111}
+.quote-scope .pc-price-best {color:#27500A}
+.quote-scope .pc-price-none {color:#ccc;font-weight:400;font-size:13px}
+.quote-scope .pc-diff {font-size:11px;color:#bbb;white-space:nowrap}
+.quote-scope .pc-diff-best {background:#EAF3DE;color:#27500A;font-weight:600;border-radius:5px;padding:2px 7px}
+@media  (max-width:640px) {
+.quote-scope .pc-row {grid-template-columns:1fr;gap:4px;justify-items:start;padding-left:14px}
+.quote-scope .pc-row-mid {width:100%;justify-content:space-between}
+}
 .quote-scope .filter-bar {display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
 .quote-scope .filter-select {height:32px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;padding:0 10px;cursor:pointer;outline:none}
 .quote-scope .filter-select:focus {border-color:#3B6D11}
@@ -886,14 +914,12 @@ body {
       <select class="filter-select" id="filter-unit" onchange="applyFilters()">
         <option value="">전체 단위</option>
       </select>
-      <button class="sort-btn" id="sort-price" onclick="toggleSort('price')">공급가 ↕</button>
       <button class="sort-btn" id="sort-name" onclick="toggleSort('name')">품목명 ↕</button>
-      <button class="sort-btn" id="sort-vendor" onclick="toggleSort('vendor')">업체명 ↕</button>
+      <button class="sort-btn" id="sort-price" onclick="toggleSort('price')">최저가 ↕</button>
+      <button class="sort-btn" id="sort-gap" onclick="toggleSort('gap')">절감액 ↕</button>
       <button class="filter-reset" onclick="resetFilters()">✕ 초기화</button>
     </div>
-    <div class="tbl-wrap">
-      <table class="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
-    </div>
+    <div class="product-cards" id="product-cards"></div>
     <div class="empty" id="empty-compare" style="display:none">🔍 검색 결과가 없습니다</div>
   </div>
 </div>
@@ -1537,7 +1563,8 @@ function toggleSort(field){
   const btn=document.getElementById('sort-'+field);
   if(btn){
     btn.classList.add('active');
-    btn.textContent = (field==='price'?'공급가':field==='name'?'품목명':'업체명') + (sortDir===1?' ↑':' ↓');
+    const labelMap = {price:'최저가', name:'품목명', gap:'절감액'};
+    btn.textContent = (labelMap[field]||field) + (sortDir===1?' ↑':' ↓');
   }
   renderAll();
 }
@@ -1548,9 +1575,9 @@ function resetFilters(){
   document.getElementById('filter-name').value='';
   document.getElementById('filter-unit').value='';
   document.querySelectorAll('.sort-btn').forEach(b=>{ b.classList.remove('active'); });
-  document.getElementById('sort-price').textContent='공급가 ↕';
+  document.getElementById('sort-price').textContent='최저가 ↕';
   document.getElementById('sort-name').textContent='품목명 ↕';
-  document.getElementById('sort-vendor').textContent='업체명 ↕';
+  document.getElementById('sort-gap').textContent='절감액 ↕';
   renderAll();
 }
 
@@ -1618,47 +1645,110 @@ function renderStats(){
 }
 
 function renderTable(){
-  const fi = filteredItems(); const q = searchQ;
-  const thead = document.getElementById('thead');
-  const tbody = document.getElementById('tbody');
+  const fi = filteredItems();
+  const q = searchQ;
+  const wrap = document.getElementById('product-cards');
   const empty = document.getElementById('empty-compare');
   const rc = document.getElementById('result-count');
 
-  thead.innerHTML = `<tr>
-    <th style="width:18%">업체명</th>
-    <th style="width:20%">품목명</th>
-    <th style="width:10%">단위</th>
-    <th style="width:16%">공급가</th>
-    <th style="width:28%">비고</th>
-    <th style="width:8%"></th>
-  </tr>`;
-
-  if (!fi.length){ tbody.innerHTML=''; empty.style.display='block'; rc.textContent=''; return; }
+  if (!fi.length){ wrap.innerHTML=''; empty.style.display='block'; rc.textContent=''; return; }
   empty.style.display = 'none';
-  rc.textContent = searchQ ? `${fi.length} / ${items.length}개 표시` : '';
 
-  const names = [...new Set(items.map(i => i.name))];
-  const minMap = {};
-  names.forEach(name => {
-    const prices = items.filter(i => i.name===name && i.price!=null && i.price!=='').map(i => i.price);
-    if (prices.length) minMap[name] = Math.min(...prices);
+  // 1차: 품목명 기준 그룹화
+  const nameGroups = {};
+  fi.forEach(it => { (nameGroups[it.name] = nameGroups[it.name] || []).push(it); });
+
+  let groupList = Object.entries(nameGroups).map(([name, rows]) => {
+    // 2차: 단위 기준 소그룹화 (같은 단위끼리만 가격 비교)
+    const unitGroups = {};
+    rows.forEach(it => {
+      const uKey = (it.unit || '').trim() || '(단위 미입력)';
+      (unitGroups[uKey] = unitGroups[uKey] || []).push(it);
+    });
+
+    const unitList = Object.entries(unitGroups).map(([unit, urows]) => {
+      const priced = urows.filter(r => r.price!=null && r.price!=='');
+      const minPrice = priced.length ? Math.min(...priced.map(r=>r.price)) : null;
+      const maxPrice = priced.length ? Math.max(...priced.map(r=>r.price)) : null;
+      const gap = (minPrice!=null && maxPrice!=null) ? (maxPrice - minPrice) : 0;
+      const gapPct = (minPrice) ? Math.round(gap / maxPrice * 100) : 0;
+      const sortedRows = [...urows].sort((a,b) => {
+        const av = a.price==null||a.price===''?Infinity:a.price;
+        const bv = b.price==null||b.price===''?Infinity:b.price;
+        return av-bv;
+      });
+      return { unit, rows: sortedRows, minPrice, maxPrice, gap, gapPct };
+    }).sort((a,b) => a.unit.localeCompare(b.unit,'ko'));
+
+    // 카드 레벨 통계: 전체 업체 행 수, 단위 옵션 수, 단위별 최대 절감액 중 가장 큰 값(정렬용)
+    const totalRows = rows.length;
+    const unitCount = unitList.length;
+    const maxGapAcrossUnits = Math.max(0, ...unitList.map(u => u.gap));
+    const cheapestMin = Math.min(...unitList.filter(u=>u.minPrice!=null).map(u=>u.minPrice), Infinity);
+
+    return { name, unitList, totalRows, unitCount, maxGapAcrossUnits, cheapestMin };
   });
 
-  tbody.innerHTML = fi.map(it => {
-    const vIdx = vendors.indexOf(it.vendor);
-    const vClass = VBC[vIdx >= 0 ? vIdx % VBC.length : 0];
-    const isMin = it.price!=null && it.price!=='' && minMap[it.name]===it.price;
-    const priceDisplay = it.price!=null&&it.price!==''
-      ? `<span${isMin?' class="best-tag"':''}>${fmt(it.price)}</span>`
-      : '<span style="color:#ccc">-</span>';
-    return `<tr>
-      <td><span class="editable vbadge ${vClass}" onclick="startEdit('${it.id}','vendor',this,'${it.vendor.replace(/'/g,"\'")}',true)">${hl(it.vendor,q)}</span></td>
-      <td style="font-weight:600"><span class="editable" onclick="startEdit('${it.id}','name',this,'${it.name.replace(/'/g,"\'")}',false)">${hl(it.name,q)}</span></td>
-      <td><span class="editable" style="color:#999;font-size:12px" onclick="startEdit('${it.id}','unit',this,'${(it.unit||'').replace(/'/g,"\'")}',false)">${it.unit||'<span style=color:#ddd>-</span>'}</span></td>
-      <td><span class="editable" onclick="startEditPrice('${it.id}',this,${it.price!=null?it.price:'null'})">${priceDisplay}</span></td>
-      <td><span class="editable note-cell" title="${it.note||''}" onclick="startEdit('${it.id}','note',this,'${(it.note||'').replace(/'/g,"\'")}',false)">${it.note ? hl(it.note,q) : '<span style=color:#ddd>비고 입력</span>'}</span></td>
-      <td><button class="row-del" onclick="deleteItem('${it.id}')" title="삭제">✕</button></td>
-    </tr>`;
+  rc.textContent = searchQ ? `${groupList.length}개 품목 · ${fi.length}개 행 표시` : `${groupList.length}개 품목`;
+
+  // 그룹(품목 카드) 정렬
+  if(sortField === 'name'){
+    groupList.sort((a,b) => a.name.localeCompare(b.name,'ko') * sortDir);
+  } else if(sortField === 'price'){
+    groupList.sort((a,b) => {
+      const av = a.cheapestMin===Infinity?Infinity:a.cheapestMin;
+      const bv = b.cheapestMin===Infinity?Infinity:b.cheapestMin;
+      return (av-bv) * sortDir;
+    });
+  } else if(sortField === 'gap'){
+    groupList.sort((a,b) => (a.maxGapAcrossUnits-b.maxGapAcrossUnits) * sortDir);
+  }
+
+  wrap.innerHTML = groupList.map(g => {
+    const unitSectionsHtml = g.unitList.map(u => {
+      const rowsHtml = u.rows.map(it => {
+        const vIdx = vendors.indexOf(it.vendor);
+        const vClass = VBC[vIdx >= 0 ? vIdx % VBC.length : 0];
+        const hasPrice = it.price!=null && it.price!=='';
+        const isMin = hasPrice && u.minPrice===it.price;
+        const diffFromMin = (hasPrice && u.minPrice!=null && !isMin) ? it.price - u.minPrice : 0;
+        const priceDisplay = hasPrice
+          ? `<span class="pc-price${isMin?' pc-price-best':''}">${fmt(it.price)}</span>`
+          : '<span class="pc-price pc-price-none">미견적</span>';
+        const diffDisplay = diffFromMin > 0
+          ? `<span class="pc-diff">+${fmt(diffFromMin)}</span>`
+          : (isMin ? '<span class="pc-diff pc-diff-best">최저가</span>' : '');
+        return `<div class="pc-row${isMin?' pc-row-best':''}">
+          <span class="editable vbadge ${vClass}" onclick="startEdit('${it.id}','vendor',this,'${it.vendor.replace(/'/g,"\'")}',true)">${hl(it.vendor,q)}</span>
+          <span class="pc-row-mid">
+            <span class="editable" onclick="startEditPrice('${it.id}',this,${it.price!=null?it.price:'null'})">${priceDisplay}</span>
+            ${diffDisplay}
+          </span>
+          <span class="editable note-cell" title="${it.note||''}" onclick="startEdit('${it.id}','note',this,'${(it.note||'').replace(/'/g,"\'")}',false)">${it.note ? hl(it.note,q) : '<span style=color:#ddd>비고</span>'}</span>
+          <button class="row-del" onclick="deleteItem('${it.id}')" title="삭제">✕</button>
+        </div>`;
+      }).join('');
+
+      return `<div class="pc-unit-section">
+        <div class="pc-unit-head">
+          <span class="pc-unit-badge editable" onclick="startEditGroupUnit('${g.name.replace(/'/g,"\'")}','${u.unit.replace(/'/g,"\'")}',this)">${u.unit}</span>
+          <span class="pc-unit-meta">${u.rows.length}개 업체${u.gap>0?` · 최대 ${fmt(u.gap)} 차이 (${u.gapPct}%)`:''}</span>
+        </div>
+        <div class="pc-body">${rowsHtml}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="product-card">
+      <div class="pc-head">
+        <div class="pc-head-main">
+          <span class="pc-name editable" onclick="startEditGroupName('${g.name.replace(/'/g,"\'")}',this)">${hl(g.name,q)}</span>
+        </div>
+        <div class="pc-head-meta">
+          <span class="pc-vendor-count">${g.totalRows}개 견적 · ${g.unitCount}개 단위</span>
+        </div>
+      </div>
+      ${unitSectionsHtml}
+    </div>`;
   }).join('');
 }
 
@@ -1805,9 +1895,10 @@ async function renameVendor(vi, newName){
 }
 
 function quoteSwitchTab(id, el){
-  document.querySelectorAll('#shell-page-quote .section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
-  if(el && el.classList) el.classList.add('active');
+  el.classList.add('active');
 }
 
 function setMode(m){
@@ -1950,14 +2041,7 @@ async function importData(){
   btn.disabled=false; btn.textContent='📥 가져오기';
   showToast(`완료: ${added}개 추가${newV.length?' / 업체 "'+newV.join(', ')+'" 자동 등록':''}`);
   cancelUpload();
-  quoteSwitchTab('compare', null);
-  // 사이드바 서브메뉴 active 동기화
-  var quoteSubnav = document.querySelector('#group-quote .shell-subnav');
-  if(quoteSubnav){
-    quoteSubnav.querySelectorAll('.shell-sublink').forEach(b => b.classList.remove('active'));
-    var compareLink = quoteSubnav.querySelector('.shell-sublink');
-    if(compareLink) compareLink.classList.add('active');
-  }
+  quoteSwitchTab('compare', document.querySelectorAll('.tab')[0]);
 }
 
 function cancelUpload(){
@@ -2022,6 +2106,53 @@ function startEdit(id, field, el, currentVal, isVendor){
   });
 }
 
+function startEditGroupName(oldName, el){
+  const input = document.createElement('input');
+  input.className = 'edit-input';
+  input.value = oldName;
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  async function commit(){
+    const val = input.value.trim();
+    if (val && val !== oldName) {
+      items.forEach(it => { if (it.name === oldName) it.name = val; });
+      await saveData();
+    }
+    renderAll();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key==='Enter') { e.preventDefault(); input.blur(); }
+    if (e.key==='Escape') { renderAll(); }
+  });
+}
+
+function startEditGroupUnit(itemName, oldUnit, el){
+  const input = document.createElement('input');
+  input.className = 'edit-input';
+  input.value = oldUnit === '(단위 미입력)' ? '' : oldUnit;
+  input.placeholder = '단위 (예: 2kg, 박스)';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  async function commit(){
+    const val = input.value.trim();
+    if (val) {
+      items.forEach(it => {
+        if (it.name === itemName && ((it.unit||'').trim() || '(단위 미입력)') === oldUnit) it.unit = val;
+      });
+      await saveData();
+    }
+    renderAll();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key==='Enter') { e.preventDefault(); input.blur(); }
+    if (e.key==='Escape') { renderAll(); }
+  });
+}
+
 function startEditPrice(id, el, currentPrice){
   const input = document.createElement('input');
   input.className = 'edit-input price-input';
@@ -2070,6 +2201,8 @@ window.deleteItem = deleteItem;
 window.removeVendor = removeVendor;
 window.startEdit = startEdit;
 window.startEditPrice = startEditPrice;
+window.startEditGroupName = startEditGroupName;
+window.startEditGroupUnit = startEditGroupUnit;
 })();
 </script>
 <script>
