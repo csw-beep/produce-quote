@@ -225,6 +225,10 @@ body {
 .quote-scope .pc-unit-meta {font-size:11.5px;color:#999}
 .quote-scope .pc-body {display:flex;flex-direction:column;padding-bottom:4px}
 .quote-scope .pc-row {display:grid;grid-template-columns:110px 1fr 1fr 28px;align-items:center;gap:10px;padding:7px 14px 7px 26px;transition:background .12s}
+.quote-scope .pc-vendor-cell {display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.quote-scope .pc-date {font-size:10.5px;color:#bbb;padding:1px 2px}
+.quote-scope .pc-date:hover {color:#3B6D11}
+.quote-scope .date-input {font-size:12px;padding:2px 4px;border:1px solid #3B6D11;border-radius:4px;outline:none}
 .quote-scope .pc-row:hover {background:#fafafa}
 .quote-scope .pc-row:hover .row-del {opacity:1}
 .quote-scope .pc-row-best {background:#F7FBF1}
@@ -982,7 +986,7 @@ body {
   <div class="card">
     <div class="card-title">새 항목 추가</div>
     <div class="form-row" id="add-form"></div>
-    <div style="margin-top:8px;font-size:12px;color:#999">공급가를 비워두면 미견적으로 처리됩니다.</div>
+    <div style="margin-top:8px;font-size:12px;color:#999">공급가를 비워두면 미견적으로 처리됩니다. 등록 날짜는 추가하는 시점으로 자동 저장됩니다.</div>
   </div>
   <div class="card">
     <div class="card-title">전체 항목 관리</div>
@@ -1488,6 +1492,20 @@ let parsedRows = null;
 
 function uid(){ return 'i' + Date.now() + Math.random().toString(36).slice(2,6); }
 function fmt(n){ return n == null || n === '' ? '-' : Number(n).toLocaleString('ko-KR') + '원'; }
+function todayStr(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+function fmtDate(dateStr){
+  if(!dateStr) return '날짜 미상';
+  // 'YYYY-MM-DD' -> 'YYYY.MM.DD'
+  const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[1]}.${m[2]}.${m[3]}`;
+  return dateStr;
+}
 
 function setSyncState(s, l){
   document.getElementById('sync-dot').className = 'sync-dot ' + (s==='ok'?'ok':s==='busy'?'busy':'err');
@@ -1719,7 +1737,10 @@ function renderTable(){
           ? `<span class="pc-diff">+${fmt(diffFromMin)}</span>`
           : (isMin ? '<span class="pc-diff pc-diff-best">최저가</span>' : '');
         return `<div class="pc-row${isMin?' pc-row-best':''}">
-          <span class="editable vbadge ${vClass}" onclick="startEdit('${it.id}','vendor',this,'${it.vendor.replace(/'/g,"\'")}',true)">${hl(it.vendor,q)}</span>
+          <span class="pc-vendor-cell">
+            <span class="editable vbadge ${vClass}" onclick="startEdit('${it.id}','vendor',this,'${it.vendor.replace(/'/g,"\'")}',true)">${hl(it.vendor,q)}</span>
+            <span class="pc-date editable" onclick="startEditDate('${it.id}',this,'${it.date||''}')">${fmtDate(it.date)}</span>
+          </span>
           <span class="pc-row-mid">
             <span class="editable" onclick="startEditPrice('${it.id}',this,${it.price!=null?it.price:'null'})">${priceDisplay}</span>
             ${diffDisplay}
@@ -1828,6 +1849,7 @@ function renderManageList(){
         <span style="font-weight:600">${it.name}</span>
         <span style="color:#999;font-size:12px">${it.unit||''}</span>
         <span>${fmt(it.price)}</span>
+        <span style="color:#bbb;font-size:11px">${fmtDate(it.date)}</span>
         ${it.note ? `<span style="font-size:12px;color:#999">${it.note}</span>` : ''}
       </div>
       <button class="btn-s" onclick="deleteItem('${it.id}')" style="color:#ef4444;border-color:#fecaca">🗑 삭제</button>
@@ -1854,7 +1876,8 @@ async function addItem(){
   const pv = document.getElementById('add-price')?.value;
   const price = pv===''||pv==null ? null : parseInt(pv);
   const note = document.getElementById('add-note')?.value.trim() || '';
-  items.push({id:uid(), vendor, name, unit, price, note});
+  const date = todayStr();
+  items.push({id:uid(), vendor, name, unit, price, note, date});
   await saveData(); renderAll();
   showToast(`"${name}" 추가됨`);
   document.getElementById('add-name').value = '';
@@ -1926,12 +1949,39 @@ function extractVendorFromFilename(filename){
 
 /* 헤더 행 자동 탐지: 상품명/공급가 등 키워드가 있는 첫 번째 행 */
 function detectHeaderRow(json){
-  const keys = ['상품','품목','공급가','가격','단가','name','price','item','코드','비고'];
+  const keys = ['상품','품목','공급가','가격','단가','name','price','item','코드','비고','날짜','date'];
   for (let i = 0; i < Math.min(json.length, 8); i++){
     const row = json[i].map(c => String(c||'').toLowerCase());
     if (keys.some(k => row.some(cell => cell.includes(k)))) return i;
   }
   return 0;
+}
+
+/* 엑셀 날짜(serial) 또는 다양한 문자열 형식을 'YYYY-MM-DD'로 정규화 */
+function parseDateCell(val){
+  if (val === '' || val == null) return null;
+  if (typeof val === 'number') {
+    // 엑셀 날짜 시리얼 번호 (1900-01-01 기준, 윤년 버그 보정 포함 XLSX가 이미 처리해주는 경우도 있음)
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    if (!isNaN(d.getTime())) return todayStrFrom(d);
+    return null;
+  }
+  const s = String(val).trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+  if (m) {
+    const yyyy = m[1], mm = String(m[2]).padStart(2,'0'), dd = String(m[3]).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return todayStrFrom(d);
+  return null;
+}
+function todayStrFrom(d){
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function processFile(file){
@@ -1971,12 +2021,16 @@ function renderPreview(json){
   /* 업체명 컬럼 없으면 파일명에서 추출 안내 */
   const headerLow = header.map(c => String(c||'').toLowerCase());
   const hasVendorCol = ['업체','vendor','거래처','공급사'].some(k => headerLow.some(h => h.includes(k)));
+  const hasDateCol = ['날짜','date','등록일','견적일'].some(k => headerLow.some(h => h.includes(k)));
   const autoVendor = extractVendorFromFilename(currentFileName);
   const vendorNote = hasVendorCol
     ? '업체명 열이 감지되었습니다.'
     : `업체명 열 없음 → 파일명에서 "<b>${autoVendor}</b>"(으)로 자동 적용됩니다.`;
+  const dateNote = hasDateCol
+    ? '날짜 열이 감지되었습니다.'
+    : '날짜 열 없음 → 가져오는 시점의 날짜가 자동 적용됩니다.';
   document.getElementById('preview-info').innerHTML =
-    `총 ${dataRows}개 행 감지됨 &nbsp;|&nbsp; ${vendorNote}`;
+    `총 ${dataRows}개 행 감지됨 &nbsp;|&nbsp; ${vendorNote} &nbsp;|&nbsp; ${dateNote}`;
 }
 
 async function importData(){
@@ -1993,11 +2047,14 @@ async function importData(){
   const cU  = find('단위','unit');
   const cP  = find('공급가','가격','단가','price');
   const cNo = find('비고','note','메모','remark');
+  const cD  = find('날짜','date','등록일','견적일');
 
   if (cN < 0){ showToast('품목명 열을 찾을 수 없습니다. 헤더를 확인해주세요.', true); return; }
 
   /* 업체명 컬럼 없으면 파일명에서 추출 */
   const autoVendor = extractVendorFromFilename(currentFileName);
+  /* 날짜 열 값이 없는 행에 적용할 기본값: 가져오기(업로드) 시점 */
+  const importDate = todayStr();
 
   const btn = document.getElementById('import-btn');
   btn.disabled = true; btn.textContent = '가져오는 중...';
@@ -2029,10 +2086,11 @@ async function importData(){
     const pRaw  = cP >= 0 ? row[cP] : '';
     const price = pRaw===''||pRaw==null ? null : Math.round(parseFloat(String(pRaw).replace(/[^0-9.]/g,'')))||null;
     const note  = cNo >= 0 ? String(row[cNo]||'').trim() : '';
+    const date  = (cD >= 0 ? parseDateCell(row[cD]) : null) || importDate;
 
     if (!vendors.includes(vendor) && !newV.includes(vendor)) newV.push(vendor);
 
-    items.push({id:uid(), vendor, name, unit, price, note});
+    items.push({id:uid(), vendor, name, unit, price, note, date});
     added++;
   });
 
@@ -2053,20 +2111,20 @@ function cancelUpload(){
 function exportTemplate(){
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['업체명','품목명','단위','공급가','비고'],
-    ['한성청과','사과','kg',3200,''],
-    ['서울농산','사과','kg',3500,'GAP 인증'],
-    ['강남과일','귤','kg',1900,'제주산'],
+    ['업체명','품목명','단위','공급가','비고','날짜'],
+    ['한성청과','사과','kg',3200,'','2026-06-16'],
+    ['서울농산','사과','kg',3500,'GAP 인증',''],
+    ['강남과일','귤','kg',1900,'제주산',''],
   ]);
-  ws['!cols'] = [{wch:14},{wch:14},{wch:8},{wch:12},{wch:20}];
+  ws['!cols'] = [{wch:14},{wch:14},{wch:8},{wch:12},{wch:20},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, '견적입력');
   XLSX.writeFile(wb, '견적_양식.xlsx');
   showToast('양식 다운로드 완료');
 }
 
 function exportCSV(){
-  let csv = '업체명,품목명,단위,공급가,비고\n';
-  items.forEach(it => { csv += `${it.vendor},${it.name},${it.unit||''},${it.price!=null?it.price:''},${it.note||''}\n`; });
+  let csv = '업체명,품목명,단위,공급가,비고,날짜\n';
+  items.forEach(it => { csv += `${it.vendor},${it.name},${it.unit||''},${it.price!=null?it.price:''},${it.note||''},${it.date||''}\n`; });
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='견적비교.csv'; a.click();
   showToast('CSV 다운로드 완료');
@@ -2179,6 +2237,29 @@ function startEditPrice(id, el, currentPrice){
   });
 }
 
+function startEditDate(id, el, currentDate){
+  const input = document.createElement('input');
+  input.className = 'edit-input date-input';
+  input.type = 'date';
+  input.value = currentDate || '';
+  el.replaceWith(input);
+  input.focus();
+  async function commit(){
+    const it = items.find(i => i.id===id);
+    if (it) {
+      it.date = input.value || null;
+      await saveData();
+    }
+    renderAll();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('change', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key==='Enter') { e.preventDefault(); input.blur(); }
+    if (e.key==='Escape') { renderAll(); }
+  });
+}
+
 loadData();
 
 window.applyFilters = applyFilters;
@@ -2203,6 +2284,7 @@ window.startEdit = startEdit;
 window.startEditPrice = startEditPrice;
 window.startEditGroupName = startEditGroupName;
 window.startEditGroupUnit = startEditGroupUnit;
+window.startEditDate = startEditDate;
 })();
 </script>
 <script>
