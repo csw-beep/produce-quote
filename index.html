@@ -3,111 +3,852 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>청과 견적 비교</title>
+<title>CCFM 청과 운영 대시보드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#111;min-height:100vh}
-.wrap{max-width:1100px;margin:0 auto;padding:1.5rem 1rem}
-.header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:12px;flex-wrap:wrap}
-.header h1{font-size:20px;font-weight:600;color:#111;display:flex;align-items:center;gap:8px}
-.header h1 span{color:#3B6D11}
-.header p{font-size:13px;color:#666;margin-top:3px}
-.sync-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 12px;border-radius:20px;background:#fff;color:#666;border:1px solid #ddd}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
-.sync-dot.ok{background:#3B6D11}
-.sync-dot.busy{background:#f59e0b;animation:pulse 1s infinite}
-.sync-dot.err{background:#ef4444}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.toolbar{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
-.search-wrap{position:relative;flex:1;min-width:180px}
-.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#999;pointer-events:none}
-.search-wrap input{width:100%;padding:0 12px 0 36px;height:38px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:14px;color:#111;outline:none}
-.search-wrap input:focus{border-color:#3B6D11}
-.tabs{display:flex;gap:6px;flex-wrap:wrap}
-.tab{padding:7px 14px;border-radius:8px;border:1px solid #ddd;font-size:13px;cursor:pointer;background:#fff;color:#666;transition:all .15s}
-.tab:hover{background:#f0f0f0}
-.tab.active{background:#3B6D11;color:#fff;border-color:#3B6D11;font-weight:500}
-.section{display:none}.section.active{display:block}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
-.stat-card{background:#fff;border-radius:10px;padding:1rem;border:1px solid #eee}
-.stat-label{font-size:11px;color:#888;margin-bottom:4px}
-.stat-val{font-size:22px;font-weight:600;color:#111}
-.stat-sub{font-size:11px;color:#999;margin-top:2px}
-.card{background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
-.card-title{font-size:13px;font-weight:600;color:#888;margin-bottom:1rem;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
-.tbl-wrap{overflow-x:auto}
-.tbl{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
-.tbl th{padding:8px 12px;text-align:left;font-weight:600;font-size:11px;color:#888;border-bottom:1px solid #f0f0f0;background:#fafafa;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
-.tbl td{padding:9px 12px;border-bottom:1px solid #f5f5f5;color:#111;vertical-align:middle}
-.tbl tbody tr:last-child td{border-bottom:none}
-.tbl tbody tr:hover td{background:#fafafa}
-.best-tag{background:#EAF3DE;color:#27500A;font-size:11px;font-weight:600;border-radius:5px;padding:3px 8px;display:inline-block}
-.vbadge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
-.vb0{background:#dbeafe;color:#1e40af}
-.vb1{background:#fef3c7;color:#92400e}
-.vb2{background:#fce7f3;color:#9d174d}
-.vb3{background:#d1fae5;color:#065f46}
-.vb4{background:#ede9fe;color:#4c1d95}
-.hl{background:rgba(59,109,17,.15);border-radius:2px;padding:0 2px}
-.empty{text-align:center;padding:3rem 1rem;color:#999;font-size:14px}
-.row-del{opacity:0;transition:opacity .15s;border:none;background:none;cursor:pointer;color:#bbb;font-size:18px;line-height:1}
-.tbl tbody tr:hover .row-del{opacity:1}
-.row-del:hover{color:#ef4444}
-.btn-p{height:36px;font-size:13px;padding:0 16px;background:#3B6D11;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .15s}
-.btn-p:hover{background:#2d5a0e}
-.btn-p:disabled{opacity:.5;cursor:not-allowed}
-.btn-s{height:34px;font-size:12px;padding:0 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .15s}
-.btn-s:hover{background:#f5f5f5}
-.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end}
-.fg{display:flex;flex-direction:column;gap:4px}
-.fg label{font-size:11px;color:#888;font-weight:500}
-.fg input,.fg select{font-size:13px;height:36px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#111;padding:0 10px;width:100%;outline:none}
-.fg input:focus,.fg select:focus{border-color:#3B6D11}
-.vendor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem}
-.vc{background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem}
-.vc-name{font-size:14px;font-weight:600;color:#111;margin-bottom:2px}
-.vc-meta{font-size:12px;color:#999;margin-bottom:12px}
-.vstat{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #f5f5f5}
-.vstat:last-child{border-bottom:none}
-.upload-zone{border:2px dashed #ddd;border-radius:12px;padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
-.upload-zone:hover,.upload-zone.drag{border-color:#3B6D11;background:#f0f7e8}
-.upload-zone svg{color:#3B6D11;margin-bottom:10px}
-.upload-zone p{font-size:14px;color:#333;font-weight:500}
-.upload-zone small{font-size:12px;color:#999}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem}
-.step{background:#fff;border-radius:10px;padding:1rem;border:1px solid #eee}
-.step-num{width:24px;height:24px;border-radius:50%;background:#3B6D11;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
-.step strong{font-size:13px;font-weight:600;color:#111;display:block;margin-bottom:3px}
-.step p{font-size:12px;color:#888}
-.preview-wrap{overflow:auto;max-height:220px;border-radius:8px;border:1px solid #eee}
-.ptbl{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
-.ptbl th{padding:7px 12px;background:#fafafa;color:#888;font-weight:600;font-size:11px;border-bottom:1px solid #eee;position:sticky;top:0}
-.ptbl td{padding:7px 12px;border-bottom:1px solid #f5f5f5;color:#333}
-.mode-wrap{display:flex;gap:8px;margin-bottom:1rem}
-.mode-btn{flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:13px;cursor:pointer;background:#fff;color:#666;text-align:center;line-height:1.5;transition:all .15s}
-.mode-btn:hover{background:#f5f5f5}
-.mode-btn.active{border-color:#3B6D11;background:#f0f7e8;color:#27500A;font-weight:500}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:#222;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.note-cell{font-size:12px;color:#888;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
-.filter-select{height:32px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;padding:0 10px;cursor:pointer;outline:none}
-.filter-select:focus{border-color:#3B6D11}
-.sort-btn{height:32px;padding:0 10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
-.sort-btn:hover{background:#f5f5f5}
-.sort-btn.active{border-color:#3B6D11;color:#3B6D11;background:#f0f7e8}
-.filter-reset{height:32px;padding:0 10px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;cursor:pointer}
-.filter-reset:hover{background:#fef2f2}
+/* ══════════════ 전역 셸 (사이드바 + 레이아웃) ══════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin:0; padding:0; }
+html.shell-dark {
+  --shell-bg: #0A0A0A; --shell-sidebar-bg: #111111; --shell-surface: #161616;
+  --shell-border: rgba(255,255,255,0.08); --shell-text: #EDEDED; --shell-text-secondary: #888;
+  --shell-accent: #e5007e; --shell-hover: #1C1C1C;
+}
+html.shell-light {
+  --shell-bg: #F7F7F5; --shell-sidebar-bg: #FFFFFF; --shell-surface: #FFFFFF;
+  --shell-border: rgba(0,0,0,0.08); --shell-text: #1a1a1a; --shell-text-secondary: #666;
+  --shell-accent: #d1006f; --shell-hover: #F5F5F4;
+}
+body {
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--shell-bg); color: var(--shell-text);
+  transition: background .2s, color .2s;
+}
 
-.editable{cursor:pointer;border-radius:4px;padding:1px 3px;transition:background .15s}
-.editable:hover{background:#f0f7e8;outline:1px dashed #3B6D11}
-.edit-input{font-size:13px;border:1.5px solid #3B6D11;border-radius:6px;padding:3px 7px;outline:none;background:#fff;color:#111;width:100%;box-sizing:border-box}
-.edit-input.price-input{width:110px}
-.result-count{margin-left:auto;font-size:11px;font-weight:400;color:#999}
+.shell { display:flex; min-height:100vh; }
+
+/* ── 사이드바 ── */
+.shell-sidebar {
+  width: 264px; flex-shrink:0;
+  background: var(--shell-sidebar-bg);
+  border-right: 1px solid var(--shell-border);
+  display:flex; flex-direction:column;
+  height:100vh; position:sticky; top:0; overflow-y:auto;
+}
+.shell-sidebar::-webkit-scrollbar { width:6px; }
+.shell-sidebar::-webkit-scrollbar-thumb { background: var(--shell-border); border-radius:3px; }
+
+.shell-brand {
+  padding: 22px 20px 18px; border-bottom:1px solid var(--shell-border);
+  display:flex; align-items:center; gap:10px;
+}
+.shell-brand-mark {
+  width:34px; height:34px; border-radius:9px;
+  background: linear-gradient(135deg, var(--shell-accent), #ff4da6);
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; flex-shrink:0;
+}
+.shell-brand-text { display:flex; flex-direction:column; line-height:1.25; }
+.shell-brand-title { font-size:14.5px; font-weight:700; letter-spacing:-0.2px; }
+.shell-brand-sub { font-size:11px; color: var(--shell-text-secondary); }
+
+.shell-nav { flex:1; padding: 14px 12px; }
+.shell-group { margin-bottom: 6px; }
+.shell-group-btn {
+  width:100%; display:flex; align-items:center; gap:10px;
+  padding: 10px 10px; border-radius:10px; border:none; background:transparent;
+  color: var(--shell-text); font-size:13.5px; font-weight:600; cursor:pointer;
+  text-align:left; transition: background .12s;
+}
+.shell-group-btn:hover { background: var(--shell-hover); }
+.shell-group-btn.active { background: color-mix(in srgb, var(--shell-accent), transparent 90%); color: var(--shell-accent); }
+.shell-group-icon { font-size:16px; width:20px; text-align:center; flex-shrink:0; }
+.shell-group-label { flex:1; }
+.shell-group-chevron { font-size:10px; color: var(--shell-text-secondary); transition: transform .15s; flex-shrink:0; }
+.shell-group-btn.active .shell-group-chevron { color: var(--shell-accent); }
+.shell-group.open .shell-group-chevron { transform: rotate(90deg); }
+
+.shell-subnav { overflow:hidden; max-height:0; transition: max-height .2s ease; }
+.shell-group.open .shell-subnav { max-height:400px; }
+.shell-sublink {
+  display:block; width:100%; text-align:left; border:none; background:transparent;
+  padding: 8px 10px 8px 40px; font-size:12.5px; color: var(--shell-text-secondary);
+  cursor:pointer; border-radius:8px; transition: background .12s, color .12s;
+}
+.shell-sublink:hover { background: var(--shell-hover); color: var(--shell-text); }
+.shell-sublink.active { color: var(--shell-accent); font-weight:600; background: color-mix(in srgb, var(--shell-accent), transparent 94%); }
+
+.shell-foot {
+  padding: 14px 20px; border-top:1px solid var(--shell-border);
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.shell-foot-org { font-size:11.5px; color: var(--shell-text-secondary); }
+.shell-theme-toggle {
+  width:30px; height:30px; border-radius:8px; border:1px solid var(--shell-border);
+  background:transparent; color: var(--shell-text-secondary); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition: background .12s;
+}
+.shell-theme-toggle:hover { background: var(--shell-hover); }
+
+/* ── 메인 콘텐츠 ── */
+.shell-main { flex:1; min-width:0; overflow-x:hidden; }
+.shell-page { display:none; }
+.shell-page.active { display:block; }
+
+/* ── 모바일 ── */
+.shell-mobile-bar {
+  display:none; align-items:center; justify-content:space-between;
+  padding: 14px 16px; border-bottom:1px solid var(--shell-border);
+  background: var(--shell-sidebar-bg); position:sticky; top:0; z-index:50;
+}
+.shell-mobile-toggle {
+  width:36px; height:36px; border-radius:9px; border:1px solid var(--shell-border);
+  background:transparent; color:var(--shell-text); display:flex; align-items:center; justify-content:center;
+}
+@media (max-width: 880px) {
+  .shell-mobile-bar { display:flex; }
+  .shell-sidebar {
+    position:fixed; left:0; top:0; z-index:100; height:100vh;
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+  }
+  .shell-sidebar.shell-open { transform: translateX(0); }
+  .shell-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:90;
+  }
+  .shell-overlay.shell-open { display:block; }
+}
+</style>
+
+<style>
+/* ══ 견적 대시보드 스타일 ══ */
+.quote-scope * {box-sizing:border-box;margin:0;padding:0}
+.quote-scope {font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#111;min-height:100%}
+.quote-scope .wrap {max-width:1100px;margin:0 auto;padding:1.5rem 1rem}
+.quote-scope .header {display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:12px;flex-wrap:wrap}
+.quote-scope .header h1 {font-size:20px;font-weight:600;color:#111;display:flex;align-items:center;gap:8px}
+.quote-scope .header h1 span {color:#3B6D11}
+.quote-scope .header p {font-size:13px;color:#666;margin-top:3px}
+.quote-scope .sync-badge {display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 12px;border-radius:20px;background:#fff;color:#666;border:1px solid #ddd}
+.quote-scope .sync-dot {width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0}
+.quote-scope .sync-dot.ok {background:#3B6D11}
+.quote-scope .sync-dot.busy {background:#f59e0b;animation:pulse 1s infinite}
+.quote-scope .sync-dot.err {background:#ef4444}
+@keyframes  pulse {0%,100%{opacity:1}50%{opacity:.3}}
+.quote-scope .toolbar {display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.quote-scope .search-wrap {position:relative;flex:1;min-width:180px}
+.quote-scope .search-wrap svg {position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#999;pointer-events:none}
+.quote-scope .search-wrap input {width:100%;padding:0 12px 0 36px;height:38px;border-radius:8px;border:1px solid #ddd;background:#fff;font-size:14px;color:#111;outline:none}
+.quote-scope .search-wrap input:focus {border-color:#3B6D11}
+.quote-scope .tabs {display:flex;gap:6px;flex-wrap:wrap}
+.quote-scope .tab {padding:7px 14px;border-radius:8px;border:1px solid #ddd;font-size:13px;cursor:pointer;background:#fff;color:#666;transition:all .15s}
+.quote-scope .tab:hover {background:#f0f0f0}
+.quote-scope .tab.active {background:#3B6D11;color:#fff;border-color:#3B6D11;font-weight:500}
+.quote-scope .section {display:none}
+.quote-scope .section.active {display:block}
+.quote-scope .stats-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
+.quote-scope .stat-card {background:#fff;border-radius:10px;padding:1rem;border:1px solid #eee}
+.quote-scope .stat-label {font-size:11px;color:#888;margin-bottom:4px}
+.quote-scope .stat-val {font-size:22px;font-weight:600;color:#111}
+.quote-scope .stat-sub {font-size:11px;color:#999;margin-top:2px}
+.quote-scope .card {background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.quote-scope .card-title {font-size:13px;font-weight:600;color:#888;margin-bottom:1rem;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.04em}
+.quote-scope .tbl-wrap {overflow-x:auto}
+.quote-scope .tbl {width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.quote-scope .tbl th {padding:8px 12px;text-align:left;font-weight:600;font-size:11px;color:#888;border-bottom:1px solid #f0f0f0;background:#fafafa;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.quote-scope .tbl td {padding:9px 12px;border-bottom:1px solid #f5f5f5;color:#111;vertical-align:middle}
+.quote-scope .tbl tbody tr:last-child td {border-bottom:none}
+.quote-scope .tbl tbody tr:hover td {background:#fafafa}
+.quote-scope .best-tag {background:#EAF3DE;color:#27500A;font-size:11px;font-weight:600;border-radius:5px;padding:3px 8px;display:inline-block}
+.quote-scope .vbadge {display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+.quote-scope .vb0 {background:#dbeafe;color:#1e40af}
+.quote-scope .vb1 {background:#fef3c7;color:#92400e}
+.quote-scope .vb2 {background:#fce7f3;color:#9d174d}
+.quote-scope .vb3 {background:#d1fae5;color:#065f46}
+.quote-scope .vb4 {background:#ede9fe;color:#4c1d95}
+.quote-scope .hl {background:rgba(59,109,17,.15);border-radius:2px;padding:0 2px}
+.quote-scope .empty {text-align:center;padding:3rem 1rem;color:#999;font-size:14px}
+.quote-scope .row-del {opacity:0;transition:opacity .15s;border:none;background:none;cursor:pointer;color:#bbb;font-size:18px;line-height:1}
+.quote-scope .tbl tbody tr:hover .row-del {opacity:1}
+.quote-scope .row-del:hover {color:#ef4444}
+.quote-scope .btn-p {height:36px;font-size:13px;padding:0 16px;background:#3B6D11;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background .15s}
+.quote-scope .btn-p:hover {background:#2d5a0e}
+.quote-scope .btn-p:disabled {opacity:.5;cursor:not-allowed}
+.quote-scope .btn-s {height:34px;font-size:12px;padding:0 12px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .15s}
+.quote-scope .btn-s:hover {background:#f5f5f5}
+.quote-scope .form-row {display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;align-items:end}
+.quote-scope .fg {display:flex;flex-direction:column;gap:4px}
+.quote-scope .fg label {font-size:11px;color:#888;font-weight:500}
+.quote-scope .fg input, .quote-scope .fg select {font-size:13px;height:36px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#111;padding:0 10px;width:100%;outline:none}
+.quote-scope .fg input:focus, .quote-scope .fg select:focus {border-color:#3B6D11}
+.quote-scope .vendor-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem}
+.quote-scope .vc {background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem}
+.quote-scope .vc-name {font-size:14px;font-weight:600;color:#111;margin-bottom:2px}
+.quote-scope .vc-meta {font-size:12px;color:#999;margin-bottom:12px}
+.quote-scope .vstat {display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #f5f5f5}
+.quote-scope .vstat:last-child {border-bottom:none}
+.quote-scope .upload-zone {border:2px dashed #ddd;border-radius:12px;padding:2.5rem 1rem;text-align:center;cursor:pointer;transition:all .15s;background:#fff}
+.quote-scope .upload-zone:hover, .quote-scope .upload-zone.drag {border-color:#3B6D11;background:#f0f7e8}
+.quote-scope .upload-zone svg {color:#3B6D11;margin-bottom:10px}
+.quote-scope .upload-zone p {font-size:14px;color:#333;font-weight:500}
+.quote-scope .upload-zone small {font-size:12px;color:#999}
+.quote-scope .steps {display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem}
+.quote-scope .step {background:#fff;border-radius:10px;padding:1rem;border:1px solid #eee}
+.quote-scope .step-num {width:24px;height:24px;border-radius:50%;background:#3B6D11;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.quote-scope .step strong {font-size:13px;font-weight:600;color:#111;display:block;margin-bottom:3px}
+.quote-scope .step p {font-size:12px;color:#888}
+.quote-scope .preview-wrap {overflow:auto;max-height:220px;border-radius:8px;border:1px solid #eee}
+.quote-scope .ptbl {width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+.quote-scope .ptbl th {padding:7px 12px;background:#fafafa;color:#888;font-weight:600;font-size:11px;border-bottom:1px solid #eee;position:sticky;top:0}
+.quote-scope .ptbl td {padding:7px 12px;border-bottom:1px solid #f5f5f5;color:#333}
+.quote-scope .mode-wrap {display:flex;gap:8px;margin-bottom:1rem}
+.quote-scope .mode-btn {flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:13px;cursor:pointer;background:#fff;color:#666;text-align:center;line-height:1.5;transition:all .15s}
+.quote-scope .mode-btn:hover {background:#f5f5f5}
+.quote-scope .mode-btn.active {border-color:#3B6D11;background:#f0f7e8;color:#27500A;font-weight:500}
+.quote-scope .toast {position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:#222;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
+.quote-scope .toast.show {opacity:1;transform:translateX(-50%) translateY(0)}
+.quote-scope .note-cell {font-size:12px;color:#888;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quote-scope .filter-bar {display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.quote-scope .filter-select {height:32px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;padding:0 10px;cursor:pointer;outline:none}
+.quote-scope .filter-select:focus {border-color:#3B6D11}
+.quote-scope .sort-btn {height:32px;padding:0 10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.quote-scope .sort-btn:hover {background:#f5f5f5}
+.quote-scope .sort-btn.active {border-color:#3B6D11;color:#3B6D11;background:#f0f7e8}
+.quote-scope .filter-reset {height:32px;padding:0 10px;border-radius:8px;border:1px solid #fca5a5;background:#fff;color:#ef4444;font-size:12px;cursor:pointer}
+.quote-scope .filter-reset:hover {background:#fef2f2}
+.quote-scope .editable {cursor:pointer;border-radius:4px;padding:1px 3px;transition:background .15s}
+.quote-scope .editable:hover {background:#f0f7e8;outline:1px dashed #3B6D11}
+.quote-scope .edit-input {font-size:13px;border:1.5px solid #3B6D11;border-radius:6px;padding:3px 7px;outline:none;background:#fff;color:#111;width:100%;box-sizing:border-box}
+.quote-scope .edit-input.price-input {width:110px}
+.quote-scope .result-count {margin-left:auto;font-size:11px;font-weight:400;color:#999}
+
+/* ══ 시즌 키워드 스타일 ══ */
+.season-scope *, .season-scope *::before, .season-scope *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.season-scope :root { interpolate-size: allow-keywords; }
+.season-scope.theme-dark {
+      --bg: #0A0A0A; --surface: #141414; --surface-hover: #1C1C1C;
+      --border: rgba(255,255,255,0.06);
+      --text: #EDEDED; --text-secondary: #888;
+      --accent: #e5007e; --accent-secondary: #ff4da6;
+      --positive: #10b981; --negative: #f43f5e; --warning: #f59e0b;
+      --info: #06b6d4;
+      --season-spring: #34d399; --season-summer: #f59e0b;
+      --season-fall: #f97316; --season-winter: #60a5fa;
+    }
+.season-scope.theme-light {
+      --bg: #F7F7F5; --surface: #FFFFFF; --surface-hover: #F5F5F4;
+      --border: rgba(0,0,0,0.07);
+      --text: #1a1a1a; --text-secondary: #666;
+      --accent: #d1006f; --accent-secondary: #e5007e;
+      --positive: #059669; --negative: #e11d48; --warning: #d97706;
+      --info: #0ea5e9;
+      --season-spring: #10b981; --season-summer: #d97706;
+      --season-fall: #ea580c; --season-winter: #3b82f6;
+    }
+.season-scope {
+      position: relative; overflow: hidden; min-height: 100%;
+      font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.7; -webkit-font-smoothing: antialiased;
+      transition: background 0.3s, color 0.3s;
+      scrollbar-gutter: stable;
+    }
+.season-scope::before {
+      content: ""; position: absolute; inset: 0; z-index: -1;
+      background: radial-gradient(ellipse 80% 50% at 50% 0%,
+        color-mix(in srgb, var(--accent), transparent 94%), transparent);
+      pointer-events: none;
+    }
+.season-scope h1, .season-scope h2, .season-scope h3, .season-scope h4 { color: var(--text); letter-spacing: -0.02em; line-height: 1.2; }
+.season-scope h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 700; }
+.season-scope h2 { font-size: clamp(1.2rem, 2.5vw, 1.6rem); font-weight: 600; }
+.season-scope h3 { font-size: clamp(1rem, 2vw, 1.2rem); font-weight: 600; }
+.season-scope .text-secondary { color: var(--text-secondary); }
+.season-scope .container { max-width: 1400px; margin: 0 auto; padding: 0 32px; }
+.season-scope .page-header {
+      padding: 48px 32px 32px;
+      max-width: 1400px; margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+.season-scope .header-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.season-scope .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 100px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em;
+    }
+.season-scope .badge-accent { background: color-mix(in srgb, var(--accent), transparent 88%); color: var(--accent); }
+.season-scope .badge-spring { background: color-mix(in srgb, var(--season-spring), transparent 85%); color: var(--season-spring); }
+.season-scope .badge-summer { background: color-mix(in srgb, var(--season-summer), transparent 85%); color: var(--season-summer); }
+.season-scope .badge-fall { background: color-mix(in srgb, var(--season-fall), transparent 85%); color: var(--season-fall); }
+.season-scope .badge-winter { background: color-mix(in srgb, var(--season-winter), transparent 85%); color: var(--season-winter); }
+.season-scope .header-sub { color: var(--text-secondary); font-size: 1rem; margin-top: 8px; }
+.season-scope .filter-section { padding: 24px 32px 0; max-width: 1400px; margin: 0 auto; }
+.season-scope .filter-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      border-bottom: 1px solid var(--border); padding-bottom: 0;
+    }
+.season-scope .tab-btn {
+      padding: 10px 20px; border: none; background: transparent;
+      color: var(--text-secondary); font-size: 0.9rem; font-weight: 500;
+      font-family: inherit; cursor: pointer; border-radius: 8px 8px 0 0;
+      position: relative; transition: all 0.2s;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+.season-scope .tab-btn:hover { color: var(--text); background: var(--surface-hover); }
+.season-scope .tab-btn.active { color: var(--accent); font-weight: 700; border-bottom-color: var(--accent); background: var(--surface); }
+.season-scope .tab-btn .tab-count {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%; font-size: 0.7rem;
+      background: var(--surface-hover); color: var(--text-secondary); margin-left: 6px;
+    }
+.season-scope .tab-btn.active .tab-count { background: color-mix(in srgb, var(--accent), transparent 85%); color: var(--accent); }
+.season-scope .kpi-section { padding: 32px 32px 0; max-width: 1400px; margin: 0 auto; }
+.season-scope .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.season-scope .kpi-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 24px; transition: box-shadow 0.2s;
+    }
+.season-scope.theme-light .kpi-card { box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.season-scope .kpi-card:hover { box-shadow: 0 0 0 1px var(--border), 0 8px 20px rgba(0,0,0,0.08); }
+.season-scope .kpi-label { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; }
+.season-scope .kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--text); line-height: 1; }
+.season-scope .kpi-value.accent { color: var(--text); }
+.season-scope .kpi-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 6px; }
+.season-scope .charts-section { padding: 32px 32px 0; max-width: 1400px; margin: 0 auto; }
+.season-scope .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.season-scope .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 24px;
+      transition: box-shadow 0.2s;
+    }
+.season-scope.theme-light .chart-card { box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.season-scope .chart-card:hover { box-shadow: 0 0 0 1px var(--border), 0 8px 20px rgba(0,0,0,0.08); }
+.season-scope .chart-title { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px; }
+.season-scope .chart-heading { font-size: 1.1rem; font-weight: 600; color: var(--text); margin-bottom: 20px; }
+.season-scope .chart-container { position: relative; min-height: 300px; }
+.season-scope .table-section { padding: 32px 32px 0; max-width: 1400px; margin: 0 auto; }
+.season-scope .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+.season-scope .table-wrapper {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+.season-scope.theme-light .table-wrapper { box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.season-scope table { width: 100%; border-collapse: collapse; }
+.season-scope thead tr { border-bottom: 1px solid var(--border); }
+.season-scope thead th {
+      padding: 12px 16px; text-align: left; font-size: 0.75rem;
+      font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-secondary); white-space: nowrap;
+      background: var(--surface);
+    }
+.season-scope tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.season-scope tbody tr:last-child { border-bottom: none; }
+.season-scope tbody tr:hover { background: var(--surface-hover); }
+.season-scope tbody td { padding: 12px 16px; font-size: 0.88rem; vertical-align: middle; }
+.season-scope .rank-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 6px; font-weight: 700;
+      font-size: 0.8rem;
+    }
+.season-scope .rank-1 { background: color-mix(in srgb, #f59e0b, transparent 80%); color: #d97706; }
+.season-scope .rank-2 { background: color-mix(in srgb, #9ca3af, transparent 80%); color: #6b7280; }
+.season-scope .rank-3 { background: color-mix(in srgb, #f97316, transparent 80%); color: #ea580c; }
+.season-scope .rank-other { background: var(--surface-hover); color: var(--text-secondary); }
+.season-scope .season-dot {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.82rem; font-weight: 600;
+    }
+.season-scope .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.season-scope .dot-spring { background: var(--season-spring); }
+.season-scope .dot-summer { background: var(--season-summer); }
+.season-scope .dot-fall { background: var(--season-fall); }
+.season-scope .dot-winter { background: var(--season-winter); }
+.season-scope .search-bar-mini {
+      height: 6px; border-radius: 3px; background: var(--surface-hover);
+      overflow: hidden; width: 100px; min-width: 80px;
+    }
+.season-scope .search-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.season-scope .launch-tag {
+      display: inline-flex; padding: 2px 8px; border-radius: 100px;
+      font-size: 0.72rem; font-weight: 600;
+    }
+.season-scope .launch-ready { background: color-mix(in srgb, var(--positive), transparent 85%); color: var(--positive); }
+.season-scope .launch-check { background: color-mix(in srgb, var(--warning), transparent 85%); color: var(--warning); }
+.season-scope .launch-done { background: color-mix(in srgb, var(--accent), transparent 85%); color: var(--accent); }
+.season-scope .nutrient-tags { display: flex; flex-wrap: wrap; gap: 4px; max-width: 220px; }
+.season-scope .nt {
+      font-size: 0.68rem; padding: 2px 7px; border-radius: 100px;
+      background: var(--surface-hover); color: var(--text-secondary);
+      border: 1px solid var(--border); white-space: nowrap;
+    }
+.season-scope .disease-tags { display: flex; flex-wrap: wrap; gap: 3px; max-width: 260px; }
+.season-scope .dt {
+      font-size: 0.63rem; padding: 2px 7px; border-radius: 4px;
+      background: rgba(120,120,120,0.15);
+      color: var(--text); border: 1px solid rgba(120,120,120,0.25);
+      white-space: nowrap; font-weight: 500; line-height: 1.6;
+    }
+.season-scope .disease-vol { font-size: 0.63rem; color: var(--text); margin-top: 4px; opacity: 0.55; }
+.season-scope .summary-section { padding: 32px 32px 0; max-width: 1400px; margin: 0 auto; }
+.season-scope .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.season-scope .summary-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; transition: box-shadow 0.2s;
+      overflow: hidden; position: relative;
+    }
+.season-scope.theme-light .summary-card { box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.season-scope .summary-card::before {
+      content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+.season-scope .summary-card.spring::before { background: var(--season-spring); }
+.season-scope .summary-card.summer::before { background: var(--season-summer); }
+.season-scope .summary-card.fall::before { background: var(--season-fall); }
+.season-scope .summary-card.winter::before { background: var(--season-winter); }
+.season-scope .summary-season { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+.season-scope .summary-season.spring { color: var(--season-spring); }
+.season-scope .summary-season.summer { color: var(--season-summer); }
+.season-scope .summary-season.fall { color: var(--season-fall); }
+.season-scope .summary-season.winter { color: var(--season-winter); }
+.season-scope .summary-top { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; }
+.season-scope .summary-stats { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.season-scope .stat-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
+.season-scope .stat-label { color: var(--text-secondary); }
+.season-scope .stat-val { font-weight: 600; color: var(--text); }
+.season-scope .disease-section { padding: 32px 32px 0; max-width: 1400px; margin: 0 auto; }
+.season-scope .disease-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.season-scope .disease-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; transition: box-shadow 0.2s;
+    }
+.season-scope .disease-name { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; }
+.season-scope .disease-products { font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
+.season-scope .search-input-wrap { position: relative; }
+.season-scope .search-input {
+      padding: 8px 14px 8px 36px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); font-family: inherit; font-size: 0.88rem;
+      outline: none; transition: border 0.2s; width: 200px;
+    }
+.season-scope .search-input:focus { border-color: var(--accent); }
+.season-scope .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; }
+.season-scope .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.season-scope .reveal.visible { opacity: 1; transform: translateY(0); }
+@keyframes  fadeInUp  { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes  fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+.season-scope .animate { animation: fadeInUp 0.5s ease-out both; }
+.season-scope .animate.delay-1 { animation-delay: 0.05s; }
+.season-scope .animate.delay-2 { animation-delay: 0.1s; }
+.season-scope .animate.delay-3 { animation-delay: 0.15s; }
+.season-scope .animate.delay-4 { animation-delay: 0.2s; }
+.season-scope .animate.delay-5 { animation-delay: 0.25s; }
+@media  (prefers-reduced-motion: reduce)  {
+.season-scope *, .season-scope *::before, .season-scope *::after { animation: none !important; transition: none !important; }
+.season-scope .reveal { opacity: 1; transform: none; }
+}
+.season-scope .viz-menu { position: absolute; top: 16px; right: 16px; z-index: 9999; }
+.season-scope .viz-menu-toggle {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(12px); transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+.season-scope .viz-menu-toggle:hover { background: var(--surface-hover); }
+.season-scope .viz-menu-dropdown {
+      position: absolute; top: 52px; right: 0; min-width: 200px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 8px;
+      opacity: 0; visibility: hidden; transform: translateY(-8px);
+      transition: all 0.2s; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+.season-scope .viz-menu-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.season-scope .viz-menu-dropdown button {
+      width: 100%; padding: 10px 14px; border: none; border-radius: 8px;
+      background: transparent; color: var(--text); font-size: 0.88rem;
+      font-family: inherit; cursor: pointer; text-align: left;
+      display: flex; align-items: center; gap: 10px; transition: background 0.15s;
+    }
+.season-scope .viz-menu-dropdown button:hover { background: var(--surface-hover); }
+.season-scope .skip-to-content {
+      position: absolute; top: -40px; left: 6px; background: var(--accent);
+      color: white; padding: 8px 12px; text-decoration: none;
+      border-radius: 4px; opacity: 0; pointer-events: none; z-index: 10000;
+    }
+.season-scope .skip-to-content:focus { top: 6px; opacity: 1; pointer-events: auto; }
+.season-scope .ccfm-footer { text-align: center; padding: 32px 0 24px; margin-top: 48px; border-top: 1px solid var(--border); }
+.season-scope .ccfm-brand { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em; color: var(--text-secondary); text-transform: uppercase; }
+.season-scope .no-data { text-align: center; padding: 48px; color: var(--text-secondary); font-size: 0.95rem; }
+@media  (max-width: 1100px)  {
+.season-scope .charts-grid { grid-template-columns: 1fr; }
+.season-scope .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+.season-scope .summary-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media  (max-width: 768px)  {
+.season-scope .container, .season-scope .page-header, .season-scope .filter-section, .season-scope .kpi-section, .season-scope .charts-section, .season-scope .table-section, .season-scope .summary-section, .season-scope .disease-section { padding-left: 16px; padding-right: 16px; }
+.season-scope .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.season-scope .summary-grid { grid-template-columns: 1fr 1fr; }
+.season-scope .table-wrapper { overflow-x: auto; }
+.season-scope table { min-width: 900px; }
+}
+@media  (max-width: 480px)  {
+.season-scope .kpi-grid { grid-template-columns: 1fr 1fr; }
+.season-scope .summary-grid { grid-template-columns: 1fr; }
+}
+@media  (max-width: 375px)  {
+.season-scope { overflow-x: hidden; }
+.season-scope .kpi-grid { grid-template-columns: 1fr; }
+}
+@media  print  {
+.season-scope { background: white !important; color: black !important; }
+.season-scope .viz-menu { display: none; }
+.season-scope .reveal { opacity: 1 !important; transform: none !important; }
+.season-scope .kpi-card, .season-scope .chart-card, .season-scope .table-wrapper, .season-scope .summary-card { break-inside: avoid; }
+.season-scope * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+@page   { margin: 0.8in; }
+
+/* ══ 검수 가이드 스타일 ══ */
+.guide-scope *, .guide-scope *::before, .guide-scope *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.guide-scope :root { interpolate-size: allow-keywords; }
+.guide-scope.theme-dark {
+      --bg: #0A0A0A; --surface: #141414; --surface-hover: #1e1e1e;
+      --border: rgba(255,255,255,0.06); --border-strong: rgba(255,255,255,0.12);
+      --text: #EDEDED; --text-secondary: #888; --text-muted: #555;
+      --accent: #e5007e; --accent-secondary: #ff4da6;
+      --positive: #10b981; --negative: #f43f5e; --warning: #f59e0b;
+      --danger-bg: rgba(244,63,94,0.1); --danger-border: rgba(244,63,94,0.2);
+      --safe-bg: rgba(16,185,129,0.1); --safe-border: rgba(16,185,129,0.2);
+      --warn-bg: rgba(245,158,11,0.1); --warn-border: rgba(245,158,11,0.2);
+    }
+.guide-scope.theme-light {
+      --bg: #F7F7F5; --surface: #FFFFFF; --surface-hover: #F5F5F4;
+      --border: rgba(0,0,0,0.07); --border-strong: rgba(0,0,0,0.14);
+      --text: #1a1a1a; --text-secondary: #666; --text-muted: #aaa;
+      --accent: #d1006f; --accent-secondary: #e5007e;
+      --positive: #059669; --negative: #e11d48; --warning: #d97706;
+      --danger-bg: rgba(225,29,72,0.06); --danger-border: rgba(225,29,72,0.18);
+      --safe-bg: rgba(5,150,105,0.06); --safe-border: rgba(5,150,105,0.18);
+      --warn-bg: rgba(217,119,6,0.06); --warn-border: rgba(217,119,6,0.18);
+    }
+.guide-scope {
+      position: relative; overflow: hidden; min-height: 100%;
+      font-family: "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.7; -webkit-font-smoothing: antialiased;
+      transition: background 0.3s, color 0.3s;
+    }
+.guide-scope::before {
+      content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+      background: radial-gradient(ellipse 70% 40% at 50% 0%,
+        color-mix(in srgb, var(--accent), transparent 93%), transparent);
+    }
+.guide-scope h1 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 700; letter-spacing: -0.02em; }
+.guide-scope h2 { font-size: clamp(1rem, 2vw, 1.25rem); font-weight: 600; letter-spacing: -0.02em; }
+.guide-scope h3 { font-size: 0.95rem; font-weight: 600; }
+.guide-scope .container { max-width: 1280px; margin: 0 auto; padding: 0 28px; }
+.guide-scope .page-header { padding: 44px 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .header-eyebrow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.guide-scope .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 100px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; }
+.guide-scope .badge-brand { background: color-mix(in srgb, var(--accent), transparent 88%); color: var(--accent); }
+.guide-scope .badge-safe { background: var(--safe-bg); color: var(--positive); border: 1px solid var(--safe-border); }
+.guide-scope .badge-danger { background: var(--danger-bg); color: var(--negative); border: 1px solid var(--danger-border); }
+.guide-scope .header-desc { color: var(--text-secondary); font-size: 0.95rem; margin-top: 8px; max-width: 600px; }
+.guide-scope .principle-section { padding: 0 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.guide-scope .principle-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; transition: box-shadow 0.2s;
+    }
+.guide-scope.theme-light .principle-card { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.guide-scope .principle-card:hover { box-shadow: 0 0 0 1px var(--border), 0 6px 16px rgba(0,0,0,0.07); }
+.guide-scope .principle-icon { font-size: 1.4rem; margin-bottom: 10px; }
+.guide-scope .principle-title { font-size: 0.82rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
+.guide-scope .principle-body { font-size: 0.88rem; color: var(--text); line-height: 1.6; }
+.guide-scope .checker-section { padding: 0 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .checker-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 28px;
+    }
+.guide-scope.theme-light .checker-card { box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.guide-scope .section-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
+.guide-scope .section-title { font-size: 1.1rem; font-weight: 600; color: var(--text); margin-bottom: 20px; }
+.guide-scope .checker-input-row { display: flex; gap: 10px; }
+.guide-scope .checker-input {
+      flex: 1; padding: 12px 16px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: var(--bg);
+      color: var(--text); font-family: inherit; font-size: 1rem;
+      outline: none; transition: border 0.2s;
+    }
+.guide-scope .checker-input:focus { border-color: var(--accent); }
+.guide-scope .checker-btn {
+      padding: 12px 22px; border-radius: 10px; border: none;
+      background: var(--accent); color: white;
+      font-family: inherit; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.2s; white-space: nowrap;
+    }
+.guide-scope .checker-btn:hover { opacity: 0.88; }
+.guide-scope .checker-result { margin-top: 18px; display: none; }
+.guide-scope .result-danger {
+      background: var(--danger-bg); border: 1px solid var(--danger-border);
+      border-radius: 10px; padding: 16px 20px;
+    }
+.guide-scope .result-safe {
+      background: var(--safe-bg); border: 1px solid var(--safe-border);
+      border-radius: 10px; padding: 16px 20px;
+    }
+.guide-scope .result-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; }
+.guide-scope .result-danger .result-title { color: var(--negative); }
+.guide-scope .result-safe .result-title { color: var(--positive); }
+.guide-scope .result-detail { font-size: 0.85rem; color: var(--text-secondary); }
+.guide-scope .result-hits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.guide-scope .hit-tag {
+      padding: 3px 10px; border-radius: 100px; font-size: 0.78rem; font-weight: 600;
+      background: color-mix(in srgb, var(--negative), transparent 82%);
+      color: var(--negative); border: 1px solid var(--danger-border);
+    }
+.guide-scope .hit-tag.warn { background: var(--warn-bg); color: var(--warning); border-color: var(--warn-border); }
+.guide-scope .cat-section { padding: 0 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.guide-scope .cat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s;
+    }
+.guide-scope.theme-light .cat-card { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.guide-scope .cat-card:hover { box-shadow: 0 0 0 1px var(--border), 0 6px 16px rgba(0,0,0,0.07); }
+.guide-scope .cat-header {
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+.guide-scope .cat-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; }
+.guide-scope .cat-icon.red { background: var(--danger-bg); }
+.guide-scope .cat-icon.orange { background: var(--warn-bg); }
+.guide-scope .cat-title { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+.guide-scope .cat-count { margin-left: auto; font-size: 0.72rem; font-weight: 700; color: var(--text-muted); }
+.guide-scope .cat-body { padding: 14px 18px; }
+.guide-scope .word-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.guide-scope .word-tag {
+      font-size: 0.72rem; padding: 3px 8px; border-radius: 5px;
+      border: 1px solid var(--danger-border); background: var(--danger-bg);
+      color: var(--negative); font-weight: 500; cursor: default;
+      transition: all 0.15s;
+    }
+.guide-scope .word-tag:hover { background: color-mix(in srgb, var(--negative), transparent 75%); }
+.guide-scope .word-tag.orange { border-color: var(--warn-border); background: var(--warn-bg); color: var(--warning); }
+.guide-scope .word-tag.orange:hover { background: color-mix(in srgb, var(--warning), transparent 75%); }
+.guide-scope .compare-section { padding: 0 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .compare-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+.guide-scope.theme-light .compare-card { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.guide-scope .compare-table { width: 100%; border-collapse: collapse; }
+.guide-scope .compare-table thead tr { border-bottom: 1px solid var(--border-strong); }
+.guide-scope .compare-table thead th {
+      padding: 13px 20px; font-size: 0.76rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary);
+      text-align: left; background: var(--surface);
+    }
+.guide-scope .compare-table thead th:first-child { width: 40%; }
+.guide-scope .compare-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+.guide-scope .compare-table tbody tr:last-child { border-bottom: none; }
+.guide-scope .compare-table tbody tr:hover { background: var(--surface-hover); }
+.guide-scope .compare-table tbody td { padding: 11px 20px; font-size: 0.875rem; vertical-align: middle; }
+.guide-scope .td-bad { color: var(--negative); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.guide-scope .td-good { color: var(--positive); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.guide-scope .icon-x { display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center; border-radius: 50%; background: var(--danger-bg); flex-shrink: 0; }
+.guide-scope .icon-o { display: inline-flex; width: 17px; height: 17px; align-items: center; justify-content: center; border-radius: 50%; background: var(--safe-bg); flex-shrink: 0; }
+.guide-scope .example-section { padding: 0 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .example-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.guide-scope .example-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s;
+    }
+.guide-scope.theme-light .example-card { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.guide-scope .example-card:hover { box-shadow: 0 0 0 1px var(--border), 0 6px 16px rgba(0,0,0,0.07); }
+.guide-scope .example-header {
+      padding: 11px 18px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em;
+      border-bottom: 1px solid var(--border); color: var(--text-secondary);
+    }
+.guide-scope .example-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.guide-scope .ex-row { display: flex; flex-direction: column; gap: 5px; }
+.guide-scope .ex-bad {
+      font-size: 0.85rem; padding: 8px 12px; border-radius: 7px;
+      background: var(--danger-bg); border: 1px solid var(--danger-border);
+      color: var(--negative);
+    }
+.guide-scope .ex-good {
+      font-size: 0.85rem; padding: 8px 12px; border-radius: 7px;
+      background: var(--safe-bg); border: 1px solid var(--safe-border);
+      color: var(--positive);
+    }
+.guide-scope .ex-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+.guide-scope .checklist-section { padding: 0 28px 28px; max-width: 1280px; margin: 0 auto; }
+.guide-scope .checklist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.guide-scope .checklist-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 22px;
+    }
+.guide-scope.theme-light .checklist-card { box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.guide-scope .checklist-card.danger-card { border-color: var(--danger-border); background: color-mix(in srgb, var(--surface), color-mix(in srgb, var(--negative), transparent 92%) 30%); }
+.guide-scope .checklist-card.safe-card { border-color: var(--safe-border); background: color-mix(in srgb, var(--surface), color-mix(in srgb, var(--positive), transparent 92%) 30%); }
+.guide-scope .checklist-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.guide-scope .checklist-icon { font-size: 1rem; }
+.guide-scope .checklist-title { font-size: 0.85rem; font-weight: 700; }
+.guide-scope .checklist-item {
+      display: flex; align-items: flex-start; gap: 9px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+    }
+.guide-scope .checklist-item:last-child { border-bottom: none; padding-bottom: 0; }
+.guide-scope .check-mark { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; cursor: pointer; transition: all 0.15s; border: 1.5px solid var(--border-strong); }
+.guide-scope .check-mark.done { background: var(--positive); border-color: var(--positive); color: white; }
+.guide-scope .checklist-text { flex: 1; color: var(--text); line-height: 1.5; }
+.guide-scope .viz-menu { position: absolute; top: 16px; right: 16px; z-index: 9999; }
+.guide-scope .viz-menu-toggle {
+      width: 42px; height: 42px; border-radius: 11px;
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.2s;
+    }
+.guide-scope .viz-menu-toggle:hover { background: var(--surface-hover); }
+.guide-scope .viz-menu-dropdown {
+      position: absolute; top: 50px; right: 0; min-width: 190px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 11px; padding: 7px;
+      opacity: 0; visibility: hidden; transform: translateY(-6px);
+      transition: all 0.18s; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+.guide-scope .viz-menu-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
+.guide-scope .viz-menu-dropdown button {
+      width: 100%; padding: 9px 13px; border: none; border-radius: 7px;
+      background: transparent; color: var(--text); font-size: 0.85rem;
+      font-family: inherit; cursor: pointer; text-align: left;
+      display: flex; align-items: center; gap: 9px; transition: background 0.12s;
+    }
+.guide-scope .viz-menu-dropdown button:hover { background: var(--surface-hover); }
+.guide-scope .skip-to-content {
+      position: absolute; top: -40px; left: 6px; background: var(--accent);
+      color: white; padding: 8px 12px; text-decoration: none;
+      border-radius: 4px; opacity: 0; pointer-events: none; z-index: 10000;
+    }
+.guide-scope .skip-to-content:focus { top: 6px; opacity: 1; pointer-events: auto; }
+@keyframes  fadeInUp  { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.guide-scope .animate { animation: fadeInUp 0.45s ease-out both; }
+.guide-scope .animate.d1 { animation-delay: 0.05s; }
+.guide-scope .animate.d2 { animation-delay: 0.1s; }
+.guide-scope .animate.d3 { animation-delay: 0.15s; }
+.guide-scope .animate.d4 { animation-delay: 0.2s; }
+.guide-scope .animate.d5 { animation-delay: 0.25s; }
+.guide-scope .reveal { opacity: 0; transform: translateY(16px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.guide-scope .reveal.visible { opacity: 1; transform: translateY(0); }
+@media  (prefers-reduced-motion: reduce)  {
+.guide-scope *, .guide-scope *::before, .guide-scope *::after { animation: none !important; transition: none !important; }
+.guide-scope .reveal { opacity: 1; transform: none; }
+}
+.guide-scope section { margin-top: 0; }
+.guide-scope .section-gap { margin-top: 28px; }
+.guide-scope .ccfm-footer { text-align: center; padding: 28px 0 20px; margin-top: 40px; border-top: 1px solid var(--border); }
+.guide-scope .ccfm-brand { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; }
+.guide-scope .channel-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.guide-scope .channel-tag { font-size: 0.72rem; padding: 3px 9px; border-radius: 100px; font-weight: 600; background: var(--warn-bg); color: var(--warning); border: 1px solid var(--warn-border); }
+@media  (max-width: 1024px)  {
+.guide-scope .cat-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media  (max-width: 768px)  {
+.guide-scope .container, .guide-scope .page-header, .guide-scope .principle-section, .guide-scope .checker-section, .guide-scope .cat-section, .guide-scope .compare-section, .guide-scope .example-section, .guide-scope .checklist-section { padding-left: 16px; padding-right: 16px; }
+.guide-scope .principle-grid { grid-template-columns: 1fr; }
+.guide-scope .cat-grid { grid-template-columns: 1fr; }
+.guide-scope .example-grid { grid-template-columns: 1fr; }
+.guide-scope .checklist-grid { grid-template-columns: 1fr; }
+.guide-scope .checker-input-row { flex-direction: column; }
+}
+@media  print  {
+.guide-scope { background: white !important; }
+.guide-scope .viz-menu { display: none; }
+.guide-scope .reveal { opacity: 1 !important; transform: none !important; }
+.guide-scope * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+}
+@page   { margin: 0.8in; }
 </style>
 </head>
 <body>
+<div class="shell-overlay" id="shell-overlay" onclick="shellCloseMobile()"></div>
+<div class="shell">
+<aside class="shell-sidebar" id="shell-sidebar">
+  <div class="shell-brand">
+    <div class="shell-brand-mark">🌿</div>
+    <div class="shell-brand-text">
+      <span class="shell-brand-title">CCFM 청과 대시보드</span>
+      <span class="shell-brand-sub">Distribution Operations</span>
+    </div>
+  </div>
+
+  <nav class="shell-nav">
+    <div class="shell-group open" id="group-quote">
+      <button class="shell-group-btn active" onclick="shellToggleGroup('quote')">
+        <span class="shell-group-icon">📦</span>
+        <span class="shell-group-label">견적 대시보드</span>
+        <span class="shell-group-chevron">›</span>
+      </button>
+      <div class="shell-subnav">
+        <button class="shell-sublink active" onclick="shellSelect('quote','compare', this)">비교표</button>
+        <button class="shell-sublink" onclick="shellSelect('quote','vendors', this)">업체 요약</button>
+        <button class="shell-sublink" onclick="shellSelect('quote','upload', this)">업로드</button>
+        <button class="shell-sublink" onclick="shellSelect('quote','add', this)">직접 추가</button>
+        <button class="shell-sublink" onclick="shellSelect('quote','settings', this)">설정</button>
+      </div>
+    </div>
+
+    <div class="shell-group" id="group-season">
+      <button class="shell-group-btn" onclick="shellToggleGroup('season')">
+        <span class="shell-group-icon">🌱</span>
+        <span class="shell-group-label">시즌 키워드</span>
+        <span class="shell-group-chevron">›</span>
+      </button>
+      <div class="shell-subnav">
+        <button class="shell-sublink" onclick="shellSelect('season','summary', this)">시즌요약</button>
+        <button class="shell-sublink" onclick="shellSelect('season','charts', this)">검색량분석</button>
+        <button class="shell-sublink" onclick="shellSelect('season','disease', this)">질환연관</button>
+        <button class="shell-sublink" onclick="shellSelect('season','table', this)">상품데이터</button>
+      </div>
+    </div>
+
+    <div class="shell-group" id="group-guide">
+      <button class="shell-group-btn" onclick="shellToggleGroup('guide')">
+        <span class="shell-group-icon">📋</span>
+        <span class="shell-group-label">검수 가이드</span>
+        <span class="shell-group-chevron">›</span>
+      </button>
+      <div class="shell-subnav">
+        <button class="shell-sublink" onclick="shellSelect('guide','principle', this)">원칙</button>
+        <button class="shell-sublink" onclick="shellSelect('guide','examples', this)">예시구문</button>
+        <button class="shell-sublink" onclick="shellSelect('guide','checker', this)">검사기</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="shell-foot">
+    <span class="shell-foot-org">CCFM · 유통팀</span>
+    <button class="shell-theme-toggle" onclick="shellToggleTheme()" id="shell-theme-btn" aria-label="다크모드 전환">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</aside>
+
+<div class="shell-main">
+  <div class="shell-mobile-bar">
+    <button class="shell-mobile-toggle" onclick="shellOpenMobile()" aria-label="메뉴 열기">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span style="font-size:13.5px;font-weight:700;">🌿 CCFM 청과 대시보드</span>
+    <span style="width:36px"></span>
+  </div>
+
+  <div class="shell-page active" id="shell-page-quote">
+<div class="quote-scope">
 <div class="wrap">
 <div class="toast" id="toast"></div>
 
@@ -127,13 +868,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="search-wrap">
     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input id="search" placeholder="품목명 또는 업체명 검색..." oninput="applySearch()" autocomplete="off"/>
-  </div>
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('compare',this)">비교표</button>
-    <button class="tab" onclick="switchTab('vendors',this)">업체 요약</button>
-    <button class="tab" onclick="switchTab('upload',this)">📤 업로드</button>
-    <button class="tab" onclick="switchTab('add',this)">➕ 직접 추가</button>
-    <button class="tab" onclick="switchTab('settings',this)">설정</button>
   </div>
 </div>
 
@@ -251,8 +985,454 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 </div>
+</div>
+  </div>
+
+  <div class="shell-page" id="shell-page-season">
+<div id="season-tab-root" class="season-scope theme-light">
+<div class="viz-menu">
+  <button class="viz-menu-toggle" onclick="seasonToggleMenu()" aria-label="메뉴">
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/>
+    </svg>
+  </button>
+  <div class="viz-menu-dropdown" id="season-vizMenuDropdown">
+    <button onclick="seasonCycleTheme()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span id="season-themeLabel">다크 모드</span>
+    </button>
+    <button onclick="seasonDownloadImage()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      PNG 다운로드
+    </button>
+    <button onclick="window.print()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      인쇄 / PDF
+    </button>
+  </div>
+</div>
+
+<a href="#season-main-content" class="skip-to-content">콘텐츠로 이동</a>
+
+<main id="season-main-content" role="main">
+
+<div data-subtab-panel="summary" class="subtab-panel">
+  <!-- Header -->
+  <header class="page-header animate">
+    <div class="header-meta">
+      <span class="badge badge-accent">CCFM 마케팅 인텔리전스</span>
+      <span class="badge badge-spring">봄 10</span>
+      <span class="badge badge-summer">여름 11</span>
+      <span class="badge badge-fall">가을 10</span>
+      <span class="badge badge-winter">겨울 9</span>
+    </div>
+    <h1>농산물 시즌 키워드 대시보드</h1>
+    <p class="header-sub">시즌별 검색량·시즌지수·질병 연관 키워드 기반 상품 런칭 전략 데이터</p>
+  </header>
+
+  <!-- Season Filter Tabs -->
+  <div class="filter-section animate delay-1">
+    <div class="filter-tabs" role="tablist">
+      <button class="tab-btn active" onclick="seasonFilterSeason('전체')" data-season="전체" role="tab">전체 <span class="tab-count" id="cnt-all">40</span></button>
+      <button class="tab-btn" onclick="seasonFilterSeason('봄')" data-season="봄" role="tab">🌸 봄 <span class="tab-count" id="cnt-spring">10</span></button>
+      <button class="tab-btn" onclick="seasonFilterSeason('여름')" data-season="여름" role="tab">☀️ 여름 <span class="tab-count" id="cnt-summer">11</span></button>
+      <button class="tab-btn" onclick="seasonFilterSeason('가을')" data-season="가을" role="tab">🍂 가을 <span class="tab-count" id="cnt-fall">10</span></button>
+      <button class="tab-btn" onclick="seasonFilterSeason('겨울')" data-season="겨울" role="tab">❄️ 겨울 <span class="tab-count" id="cnt-winter">9</span></button>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <section class="kpi-section" aria-label="핵심 지표">
+    <div class="kpi-grid">
+      <div class="kpi-card animate delay-1">
+        <div class="kpi-label">총 키워드</div>
+        <div class="kpi-value accent" id="kpi-total">40</div>
+        <div class="kpi-sub">시즌 분류 상품</div>
+      </div>
+      <div class="kpi-card animate delay-2">
+        <div class="kpi-label">평균 검색량</div>
+        <div class="kpi-value" id="kpi-avg-search">—</div>
+        <div class="kpi-sub">월평균 검색수</div>
+      </div>
+      <div class="kpi-card animate delay-3">
+        <div class="kpi-label">최고 시즌지수</div>
+        <div class="kpi-value" id="kpi-max-season">—</div>
+        <div class="kpi-sub" id="kpi-max-season-name">—</div>
+      </div>
+      <div class="kpi-card animate delay-4">
+        <div class="kpi-label">런칭 가능 상품</div>
+        <div class="kpi-value" id="kpi-launchable">—</div>
+        <div class="kpi-sub">런칭 완료·가능 합산</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Season Summary -->
+  <section class="summary-section reveal" aria-label="시즌별 요약">
+    <div class="section-header">
+      <div>
+        <div class="chart-title">시즌 요약</div>
+        <div class="chart-heading">시즌별 TOP 상품 현황</div>
+      </div>
+    </div>
+    <div class="summary-grid" id="summary-grid">
+      <!-- JS로 생성 -->
+    </div>
+  </section>
+</div>
+
+<div data-subtab-panel="charts" class="subtab-panel" style="display:none">
+  <!-- Charts -->
+  <section class="charts-section reveal" aria-label="검색량 차트">
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">검색량 분석</div>
+        <div class="chart-heading" id="bar-chart-title">시즌별 평균 검색량 TOP 20</div>
+        <div class="chart-container" style="min-height:360px;">
+          <canvas id="searchBarChart" role="img" aria-label="검색량 막대 차트"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">시즌지수 분포</div>
+        <div class="chart-heading">시즌지수 vs 평균검색량</div>
+        <div class="chart-container" style="min-height:360px;">
+          <canvas id="scatterChart" role="img" aria-label="시즌지수 산점도"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div data-subtab-panel="disease" class="subtab-panel" style="display:none">
+  <!-- Disease Keywords -->
+  <section class="disease-section reveal" aria-label="질병 키워드">
+    <div class="section-header">
+      <div>
+        <div class="chart-title">질병 연관 분석</div>
+        <div class="chart-heading">주요 질병 키워드 검색량</div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">질병별 연관 상품 수</div>
+        <div class="chart-heading">질병 카테고리 분포</div>
+        <div class="chart-container" style="min-height:320px;">
+          <canvas id="diseaseChart" role="img" aria-label="질병 카테고리 차트"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">소비자 구매 이유 TOP 5</div>
+        <div class="chart-heading">자주 언급된 구매 이유</div>
+        <div class="chart-container" style="min-height:320px;">
+          <canvas id="reasonChart" role="img" aria-label="구매 이유 차트"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div data-subtab-panel="table" class="subtab-panel" style="display:none">
+  <!-- Table -->
+  <section class="table-section reveal" aria-label="상품 목록">
+    <div class="section-header">
+      <div>
+        <div class="chart-title">상품 데이터</div>
+        <div class="chart-heading" id="table-title">전체 상품 목록</div>
+      </div>
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="search-input" id="tableSearch" placeholder="키워드 검색..." oninput="seasonFilterTable()" aria-label="키워드 검색">
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table id="productTable">
+        <thead>
+          <tr>
+            <th>순위</th>
+            <th>시즌</th>
+            <th>키워드</th>
+            <th>피크월</th>
+            <th>시즌지수</th>
+            <th>평균검색량</th>
+            <th style="min-width:120px;">검색량</th>
+            <th>추천런칭월</th>
+            <th style="min-width:240px;">연관 질병</th>
+            <th style="min-width:200px;">주요 영양소</th>
+            <th>업체/비고</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- JS로 생성 -->
+        </tbody>
+      </table>
+      <div class="no-data" id="noDataMsg" style="display:none;">검색 결과가 없습니다.</div>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<footer class="ccfm-footer">
+  <span class="ccfm-brand">CCFM</span>
+</footer>
+
+</div>
+  </div>
+
+  <div class="shell-page" id="shell-page-guide">
+<div id="guide-tab-root" class="guide-scope theme-light">
+<div class="viz-menu">
+  <button class="viz-menu-toggle" onclick="guideToggleMenu()" aria-label="메뉴">
+    <svg width="17" height="17" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <line x1="3" y1="5" x2="17" y2="5"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="3" y1="15" x2="17" y2="15"/>
+    </svg>
+  </button>
+  <div class="viz-menu-dropdown" id="guide-vizMenuDropdown">
+    <button onclick="guideCycleTheme()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <span id="guide-themeLabel">다크 모드</span>
+    </button>
+    <button onclick="guideDownloadImage()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      PNG 다운로드
+    </button>
+    <button onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      인쇄 / PDF
+    </button>
+  </div>
+</div>
+
+<a href="#guide-main-content" class="skip-to-content">콘텐츠로 이동</a>
+
+<main id="guide-main-content">
+
+<div data-subtab-panel="principle" class="subtab-panel">
+  <!-- Header -->
+  <header class="page-header animate">
+    <div class="header-eyebrow">
+      <span class="badge badge-brand">삼초마을</span>
+      <span class="badge badge-danger">금지 표현 가이드</span>
+      <span class="badge badge-safe">식품·농산물 운영 기준</span>
+    </div>
+    <h1>콘텐츠 표현 검수 가이드</h1>
+    <p class="header-desc">원물·농산물 기반 웰니스 큐레이션 브랜드로서 효능·치료·질병 관련 표현을 지양하고, 생활 공감 언어로 소통하는 기준입니다.</p>
+    <div class="channel-tags">
+      <span class="channel-tag">쿠팡</span>
+      <span class="channel-tag">네이버</span>
+      <span class="channel-tag">메타 광고</span>
+      <span class="channel-tag">스마트스토어</span>
+      <span class="channel-tag">카카오</span>
+    </div>
+  </header>
+
+  <!-- Principles -->
+  <section class="principle-section animate d1" aria-label="브랜드 원칙">
+    <div class="principle-grid">
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--negative)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        </div>
+        <div class="principle-title">절대 금지</div>
+        <div class="principle-body">효능·치료·질병 개선처럼 <strong>건강기능식품으로 오인</strong>되는 표현. 플랫폼 정책 위반 및 광고 제한 위험.</div>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="principle-title">권장 방향</div>
+        <div class="principle-body"><strong>상황·습관·공감·생활 언어</strong>로 말한다. "이 음식이 몸에 좋다"가 아니라 "왜 다시 찾게 되는지"를 이야기한다.</div>
+      </div>
+      <div class="principle-card">
+        <div class="principle-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="principle-title">플랫폼 주의</div>
+        <div class="principle-body">쿠팡·네이버·메타·스마트스토어는 <strong>식품 광고 표현에 민감</strong>. 콘텐츠·상세페이지·광고 카피 모두 이 기준으로 검수 필요.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Forbidden Word Categories -->
+  <section class="cat-section section-gap reveal" aria-label="금지 표현 카테고리">
+    <div class="section-label" style="padding: 0 0 6px;">카테고리별 금지 표현</div>
+    <div class="section-title" style="padding: 0 0 16px;">절대 사용 금지 단어 목록</div>
+    <div class="cat-grid">
+
+      <div class="cat-card">
+        <div class="cat-header">
+          <div class="cat-icon red">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--negative)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div class="cat-title">질병 치료·예방 표현</div>
+          <div class="cat-count">12개</div>
+        </div>
+        <div class="cat-body">
+          <div class="word-list">
+            <span class="word-tag">치료</span><span class="word-tag">예방</span><span class="word-tag">개선</span><span class="word-tag">완화</span><span class="word-tag">치유</span><span class="word-tag">회복</span><span class="word-tag">제거</span><span class="word-tag">억제</span><span class="word-tag">낮춘다</span><span class="word-tag">없앤다</span><span class="word-tag">잡는다</span><span class="word-tag">케어</span><span class="word-tag">해결</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-header">
+          <div class="cat-icon red">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--negative)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div class="cat-title">질병명 직접 언급 금지</div>
+          <div class="cat-count">14개</div>
+        </div>
+        <div class="cat-body">
+          <div class="word-list">
+            <span class="word-tag">당뇨</span><span class="word-tag">고혈압</span><span class="word-tag">암</span><span class="word-tag">아토피</span><span class="word-tag">비염</span><span class="word-tag">관절염</span><span class="word-tag">치매</span><span class="word-tag">우울증</span><span class="word-tag">지방간</span><span class="word-tag">심혈관질환</span><span class="word-tag">위염</span><span class="word-tag">역류성식도염</span><span class="word-tag">갑상선</span><span class="word-tag">불면증</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-header">
+          <div class="cat-icon orange">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+          </div>
+          <div class="cat-title">건강기능식품 암시 표현</div>
+          <div class="cat-count">12개</div>
+        </div>
+        <div class="cat-body">
+          <div class="word-list">
+            <span class="word-tag orange">기능성</span><span class="word-tag orange">면역력 강화</span><span class="word-tag orange">항산화</span><span class="word-tag orange">항염</span><span class="word-tag orange">해독</span><span class="word-tag orange">디톡스</span><span class="word-tag orange">혈액순환 개선</span><span class="word-tag orange">지방 연소</span><span class="word-tag orange">활성산소 제거</span><span class="word-tag orange">콜레스테롤 개선</span><span class="word-tag orange">혈당 조절</span><span class="word-tag orange">장 건강 개선</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-header">
+          <div class="cat-icon red">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--negative)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div class="cat-title">의학·전문가 암시 표현</div>
+          <div class="cat-count">9개</div>
+        </div>
+        <div class="cat-body">
+          <div class="word-list">
+            <span class="word-tag">의사 추천</span><span class="word-tag">약사 추천</span><span class="word-tag">전문의 인증</span><span class="word-tag">임상 입증</span><span class="word-tag">검증 완료</span><span class="word-tag">의학적으로 증명</span><span class="word-tag">논문 인증</span><span class="word-tag">병원 납품</span><span class="word-tag">처방 수준</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-header">
+          <div class="cat-icon orange">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+          </div>
+          <div class="cat-title">체형·다이어트 자극 표현</div>
+          <div class="cat-count">6개</div>
+        </div>
+        <div class="cat-body">
+          <div class="word-list">
+            <span class="word-tag orange">살 빠지는</span><span class="word-tag orange">지방 태우는</span><span class="word-tag orange">뱃살 제거</span><span class="word-tag orange">붓기 제거</span><span class="word-tag orange">체중 감량 보장</span><span class="word-tag orange">먹기만 해도</span><span class="word-tag orange">다이어트 효과</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cat-card">
+        <div class="cat-header">
+          <div class="cat-icon red">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--negative)" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div class="cat-title">어린이 건강 민감 표현</div>
+          <div class="cat-count">7개</div>
+        </div>
+        <div class="cat-body">
+          <div class="word-list">
+            <span class="word-tag">성장 발달</span><span class="word-tag">키 크는</span><span class="word-tag">면역 키우는</span><span class="word-tag">집중력 향상</span><span class="word-tag">두뇌 발달</span><span class="word-tag">아토피 개선</span><span class="word-tag">변비 해결</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Checklist -->
+  <section class="checklist-section section-gap reveal" aria-label="검수 체크리스트">
+    <div class="section-label" style="padding: 0 0 6px;">운영 기준</div>
+    <div class="section-title" style="padding: 0 0 16px;">콘텐츠 작성 시 검수 체크리스트</div>
+    <div class="checklist-grid">
+      <div class="checklist-card danger-card">
+        <div class="checklist-header">
+          <div class="checklist-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--negative)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          </div>
+          <div class="checklist-title" style="color:var(--negative);">이렇게 쓰면 안 됩니다</div>
+        </div>
+        <div id="checklistBad"></div>
+      </div>
+      <div class="checklist-card safe-card">
+        <div class="checklist-header">
+          <div class="checklist-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--positive)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="checklist-title" style="color:var(--positive);">이렇게 써야 합니다</div>
+        </div>
+        <div id="checklistGood"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div data-subtab-panel="examples" class="subtab-panel" style="display:none">
+  <!-- Replacement Table -->
+  <section class="compare-section section-gap reveal" aria-label="대체 표현 가이드">
+    <div class="section-label" style="padding: 0 0 6px;">대체 표현 가이드</div>
+    <div class="section-title" style="padding: 0 0 16px;">금지 표현 → 권장 표현 치환 테이블</div>
+    <div class="compare-card">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>❌ 금지 표현</th>
+            <th>⭕ 권장 표현</th>
+          </tr>
+        </thead>
+        <tbody id="compareTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Examples -->
+  <section class="example-section section-gap reveal" aria-label="실전 예시">
+    <div class="section-label" style="padding: 0 0 6px;">실전 예시</div>
+    <div class="section-title" style="padding: 0 0 16px;">삼초마을식 안전한 표현 예시</div>
+    <div class="example-grid" id="exampleGrid"></div>
+  </section>
+</div>
+
+<div data-subtab-panel="checker" class="subtab-panel" style="display:none">
+  <!-- Expression Checker -->
+  <section class="checker-section section-gap reveal" aria-label="표현 검사기">
+    <div class="checker-card">
+      <div class="section-label">실시간 검사</div>
+      <div class="section-title">표현 금지어 체커</div>
+      <div class="checker-input-row">
+        <input type="text" class="checker-input" id="checkerInput" placeholder="문구를 입력하세요 (예: 혈당 개선에 도움이 되는 식품)" oninput="guideRunChecker()" aria-label="표현 검사 입력">
+        <button class="checker-btn" onclick="guideRunChecker()">검사하기</button>
+      </div>
+      <div class="checker-result" id="checkerResult"></div>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<footer class="ccfm-footer">
+  <span class="ccfm-brand">CCFM</span>
+</footer>
+</div>
+  </div>
+</div>
+</div>
 
 <script>
+(function(){
+
 /* ── Firebase 설정 (여기만 수정하면 됩니다) ── */
 const FB_URL = 'https://produce-quote-default-rtdb.firebaseio.com';
 
@@ -624,11 +1804,10 @@ async function renameVendor(vi, newName){
   await saveData(); renderAll(); showToast('업체명 변경됨');
 }
 
-function switchTab(id, el){
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+function quoteSwitchTab(id, el){
+  document.querySelectorAll('#shell-page-quote .section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
-  el.classList.add('active');
+  if(el && el.classList) el.classList.add('active');
 }
 
 function setMode(m){
@@ -771,7 +1950,14 @@ async function importData(){
   btn.disabled=false; btn.textContent='📥 가져오기';
   showToast(`완료: ${added}개 추가${newV.length?' / 업체 "'+newV.join(', ')+'" 자동 등록':''}`);
   cancelUpload();
-  switchTab('compare', document.querySelectorAll('.tab')[0]);
+  quoteSwitchTab('compare', null);
+  // 사이드바 서브메뉴 active 동기화
+  var quoteSubnav = document.querySelector('#group-quote .shell-subnav');
+  if(quoteSubnav){
+    quoteSubnav.querySelectorAll('.shell-sublink').forEach(b => b.classList.remove('active'));
+    var compareLink = quoteSubnav.querySelector('.shell-sublink');
+    if(compareLink) compareLink.classList.add('active');
+  }
 }
 
 function cancelUpload(){
@@ -863,6 +2049,808 @@ function startEditPrice(id, el, currentPrice){
 }
 
 loadData();
+
+window.applyFilters = applyFilters;
+window.applySearch = applySearch;
+window.cancelUpload = cancelUpload;
+window.exportCSV = exportCSV;
+window.exportTemplate = exportTemplate;
+window.onDrop = onDrop;
+window.onFileSelect = onFileSelect;
+window.resetFilters = resetFilters;
+window.setMode = setMode;
+window.quoteSwitchTab = quoteSwitchTab;
+window.toggleSort = toggleSort;
+window.loadData = loadData;
+window.resetData = resetData;
+window.addVendor = addVendor;
+window.importData = importData;
+window.addItem = addItem;
+window.deleteItem = deleteItem;
+window.removeVendor = removeVendor;
+window.startEdit = startEdit;
+window.startEditPrice = startEditPrice;
+})();
+</script>
+<script>
+(function(){
+
+Chart.defaults.animation = false;
+
+// ===== DATA =====
+var ALL_DATA = [
+  // 봄
+  {시즌:'봄',순위:1,키워드:'엄나무순',피크월:'4월(26)',시즌지수:1.79,평균검색량:86192,최대검색량:154200,추천런칭월:'2월~3월',질병:'류마티스, 관절염, 항암, 피로회복, 간질환',질병검색량:8980,영양소:'사포닌, 플라보노이드, 단백질, 칼슘, 철분, 비타민C',구매이유:'면역력 강화·감기 예방, 당뇨·혈당 관리, 눈건강·시력 개선, 혈압·혈관·동맥경화, 해독·간 건강',업체:'',비고:''},
+  {시즌:'봄',순위:2,키워드:'참외',피크월:'5월(25)',시즌지수:2.48,평균검색량:61407,최대검색량:152300,추천런칭월:'4월',질병:'황달, 변비, 부종, 피부미용, 이뇨',질병검색량:13330,영양소:'비타민C, 엽산, 칼륨, 베타카로틴, 수분(92%)',구매이유:'',업체:'',비고:''},
+  {시즌:'봄',순위:3,키워드:'고수',피크월:'4월(26)',시즌지수:1.87,평균검색량:66090,최대검색량:123900,추천런칭월:'2월~3월',질병:'콜레스테롤, 빈혈, 소화불량, 피부염, 항산화',질병검색량:18120,영양소:'비타민K, 비타민C, 베타카로틴, 철분, 망간',구매이유:'항산화·노화 방지, 소화·변비 개선, 면역력 강화·감기 예방, 해독·간 건강, 다이어트·체중 관리',업체:'',비고:''},
+  {시즌:'봄',순위:4,키워드:'명이나물',피크월:'4월(25)',시즌지수:1.78,평균검색량:69460,최대검색량:123300,추천런칭월:'4월',질병:'당뇨, 콜레스테롤, 고혈압, 동맥경화, 항암',질병검색량:20050,영양소:'알리신, 비타민C, 칼슘, 철분, 안토시아닌',구매이유:'면역력 강화·감기 예방, 당뇨·혈당 관리, 소화·변비 개선, 혈압·혈관·동맥경화, 눈건강·시력 개선',업체:'',비고:''},
+  {시즌:'봄',순위:5,키워드:'망고스틴',피크월:'5월(25)',시즌지수:2.66,평균검색량:40905,최대검색량:108900,추천런칭월:'4월',질병:'당뇨, 면역력, 항산화, 항암, 피부미용',질병검색량:20050,영양소:'잔톤(Xanthone), 비타민C, 식이섬유, 망간, 엽산',구매이유:'',업체:'',비고:''},
+  {시즌:'봄',순위:6,키워드:'마늘쫑',피크월:'5월(25)',시즌지수:2.66,평균검색량:37576,최대검색량:100080,추천런칭월:'4월',질병:'당뇨, 콜레스테롤, 고혈압, 동맥경화, 항암',질병검색량:20050,영양소:'알리신, 비타민C, 칼슘, 철분, 셀레늄',구매이유:'',업체:'한톨',비고:'런칭 완료'},
+  {시즌:'봄',순위:7,키워드:'냉이',피크월:'3월(26)',시즌지수:2.62,평균검색량:35680,최대검색량:93530,추천런칭월:'12월',질병:'고혈압, 빈혈, 소화불량, 눈건강, 간질환',질병검색량:17230,영양소:'철분, 칼슘, 비타민C, 비타민K, 엽산',구매이유:'',업체:'',비고:''},
+  {시즌:'봄',순위:8,키워드:'눈개승마',피크월:'4월(25)',시즌지수:1.55,평균검색량:55870,최대검색량:86640,추천런칭월:'4월',질병:'빈혈, 관절염, 항산화, 피로회복, 간질환',질병검색량:10500,영양소:'단백질, 비타민C, 칼슘, 사포닌, 폴리페놀',구매이유:'',업체:'',비고:''},
+  {시즌:'봄',순위:9,키워드:'대저토마토',피크월:'4월(25)',시즌지수:1.7,평균검색량:48158,최대검색량:82010,추천런칭월:'4월',질병:'전립선암, 고혈압, 동맥경화, 항암, 피부미용',질병검색량:18960,영양소:'라이코펜, 비타민C, 칼륨, 베타카로틴, 루틴',구매이유:'',업체:'',비고:''},
+  {시즌:'봄',순위:10,키워드:'파로',피크월:'4월(25)',시즌지수:1.68,평균검색량:48745,최대검색량:81700,추천런칭월:'4월',질병:'당뇨, 콜레스테롤, 변비, 빈혈, 소화불량',질병검색량:20050,영양소:'단백질, 식이섬유, 마그네슘, 철분, 아연',구매이유:'',업체:'',비고:''},
+  // 여름
+  {시즌:'여름',순위:1,키워드:'복숭아',피크월:'8월(25)',시즌지수:3.37,평균검색량:57472,최대검색량:193500,추천런칭월:'5월',질병:'기관지염, 변비, 빈혈, 항산화, 피부미용',질병검색량:13230,영양소:'비타민C, 베타카로틴, 칼륨, 나이아신, 철분',구매이유:'',업체:'한톨',비고:'런칭 가능'},
+  {시즌:'여름',순위:2,키워드:'수박',피크월:'7월(25)',시즌지수:3.05,평균검색량:62313,최대검색량:189900,추천런칭월:'5월~6월',질병:'전립선암, 고혈압, 부종, 신장염, 이뇨',질병검색량:18960,영양소:'라이코펜, 시트룰린, 비타민C, 칼륨, 베타카로틴',구매이유:'다이어트·체중 관리, 당뇨·혈당 관리, 소화·변비 개선, 피부 미용·콜라겐, 항산화·노화 방지',업체:'',비고:''},
+  {시즌:'여름',순위:3,키워드:'옥수수',피크월:'7월(25)',시즌지수:3.34,평균검색량:54128,최대검색량:180600,추천런칭월:'5월~6월',질병:'당뇨, 콜레스테롤, 변비, 눈건강, 이뇨',질병검색량:20050,영양소:'루테인, 제아잔틴, 식이섬유, 비타민B군, 마그네슘',구매이유:'',업체:'다원명가식품',비고:'찰옥수수 런칭 가능'},
+  {시즌:'여름',순위:4,키워드:'무화과',피크월:'8월(25)',시즌지수:3.42,평균검색량:49937,최대검색량:170800,추천런칭월:'6월~7월',질병:'고혈압, 골다공증, 변비, 빈혈, 항암',질병검색량:17230,영양소:'칼슘, 철분, 식이섬유, 칼륨, 비타민K',구매이유:'',업체:'',비고:''},
+  {시즌:'여름',순위:5,키워드:'블루베리',피크월:'7월(25)',시즌지수:1.91,평균검색량:83123,최대검색량:159100,추천런칭월:'5월~6월',질병:'당뇨, 고혈압, 치매, 항산화, 눈건강',질병검색량:20050,영양소:'안토시아닌, 비타민C, 비타민K, 망간, 식이섬유',구매이유:'항산화·노화 방지, 소화·변비 개선, 다이어트·체중 관리, 피부 미용·콜라겐, 면역력 강화·감기 예방',업체:'',비고:''},
+  {시즌:'여름',순위:6,키워드:'감자',피크월:'6월(25)',시즌지수:2.08,평균검색량:64708,최대검색량:134700,추천런칭월:'4월~5월',질병:'고혈압, 변비, 빈혈, 관절염, 소화불량',질병검색량:17230,영양소:'칼륨, 비타민C, 비타민B6, 식이섬유, 마그네슘',구매이유:'당뇨·혈당 관리, 다이어트·체중 관리, 소화·변비 개선, 면역력 강화·감기 예방, 피로 회복·에너지',업체:'',비고:''},
+  {시즌:'여름',순위:7,키워드:'산딸기',피크월:'6월(25)',시즌지수:2.63,평균검색량:49557,최대검색량:130100,추천런칭월:'4월~5월',질병:'당뇨, 면역력, 빈혈, 항산화, 피부미용',질병검색량:20050,영양소:'안토시아닌, 비타민C, 엘라직산, 식이섬유, 망간',구매이유:'',업체:'',비고:''},
+  {시즌:'여름',순위:8,키워드:'신비복숭아',피크월:'7월(25)',시즌지수:2.23,평균검색량:57222,최대검색량:127500,추천런칭월:'5월~6월',질병:'기관지염, 변비, 빈혈, 항산화, 피부미용',질병검색량:13230,영양소:'비타민C, 베타카로틴, 칼륨, 나이아신, 철분',구매이유:'',업체:'한톨',비고:'런칭 가능'},
+  {시즌:'여름',순위:9,키워드:'납작복숭아',피크월:'7월(25)',시즌지수:3.03,평균검색량:39694,최대검색량:120200,추천런칭월:'5월~6월',질병:'기관지염, 변비, 빈혈, 항산화, 피부미용',질병검색량:13230,영양소:'비타민C, 베타카로틴, 칼륨, 나이아신, 철분',구매이유:'',업체:'한톨',비고:'납작 확인 필요'},
+  {시즌:'여름',순위:10,키워드:'오디',피크월:'6월(25)',시즌지수:3.26,평균검색량:34003,최대검색량:110700,추천런칭월:'4월~5월',질병:'당뇨, 고혈압, 골다공증, 동맥경화, 빈혈',질병검색량:20050,영양소:'안토시아닌, 레스베라트롤, 철분, 칼슘, 비타민C',구매이유:'콜레스테롤 완화',업체:'',비고:''},
+  {시즌:'여름',순위:11,키워드:'자두',피크월:'7월(25)',시즌지수:3.03,평균검색량:85484,최대검색량:108040,추천런칭월:'7월',질병:'골다공증, 변비, 빈혈, 항산화, 피부미용',질병검색량:16270,영양소:'비타민K, 비타민C, 칼륨, 식이섬유, 베타카로틴',구매이유:'소화·변비 개선, 다이어트·체중 관리, 면역력 강화·감기 예방, 항산화·노화 방지, 당뇨·혈당 관리',업체:'한톨',비고:'런칭 가능'},
+  // 가을
+  {시즌:'가을',순위:1,키워드:'송이버섯',피크월:'10월(25)',시즌지수:3.93,평균검색량:50763,최대검색량:199300,추천런칭월:'8월~9월',질병:'당뇨, 콜레스테롤, 면역력, 소화불량, 항암',질병검색량:20050,영양소:'베타글루칸, 에르고스테롤, 비타민D, 식이섬유, 단백질',구매이유:'',업체:'',비고:''},
+  {시즌:'가을',순위:2,키워드:'쌀20kg',피크월:'9월(25)',시즌지수:2.0,평균검색량:94808,최대검색량:189600,추천런칭월:'6월',질병:'당뇨, 고혈압, 변비, 소화불량, 비만',질병검색량:20050,영양소:'탄수화물, 비타민B1(티아민), 마그네슘, 철분, 식이섬유',구매이유:'당뇨·혈당 관리, 혈압·혈관·동맥경화, 뼈·관절 건강, 항산화·노화 방지, 암 예방·항암',업체:'혈당조절씰, 오르조팜',비고:'확인 필요'},
+  {시즌:'가을',순위:3,키워드:'샤인머스켓',피크월:'9월(25)',시즌지수:3.45,평균검색량:49936,최대검색량:172300,추천런칭월:'7월~8월',질병:'골다공증, 빈혈, 항산화, 심장질환, 피부미용',질병검색량:16270,영양소:'레스베라트롤, 폴리페놀, 비타민C, 칼륨, 식이섬유',구매이유:'',업체:'',비고:''},
+  {시즌:'가을',순위:4,키워드:'능이버섯',피크월:'10월(25)',시즌지수:3.42,평균검색량:39879,최대검색량:136580,추천런칭월:'5월',질병:'당뇨, 고혈압, 면역력, 소화불량, 항암',질병검색량:20050,영양소:'베타글루칸, 에르고스테롤, 비타민D, 식이섬유, 단백질',구매이유:'',업체:'',비고:''},
+  {시즌:'가을',순위:5,키워드:'쌀10kg',피크월:'9월(25)',시즌지수:1.77,평균검색량:76308,최대검색량:135400,추천런칭월:'7월~8월',질병:'당뇨, 고혈압, 변비, 소화불량, 비만',질병검색량:20050,영양소:'탄수화물, 비타민B1(티아민), 마그네슘, 철분, 식이섬유',구매이유:'',업체:'',비고:''},
+  {시즌:'가을',순위:6,키워드:'감홍사과',피크월:'11월(25)',시즌지수:2.11,평균검색량:63300,최대검색량:133300,추천런칭월:'9월~10월',질병:'당뇨, 콜레스테롤, 고혈압, 동맥경화, 변비',질병검색량:20050,영양소:'퀘르세틴, 폴리페놀, 식이섬유, 비타민C, 칼륨',구매이유:'소화·변비 개선, 항산화·노화 방지, 면역력 강화·감기 예방, 피로 회복·에너지, 다이어트·체중 관리',업체:'싱싱보따리',비고:'대저 사과로 진행 가능'},
+  {시즌:'가을',순위:7,키워드:'대봉감',피크월:'11월(25)',시즌지수:1.93,평균검색량:50825,최대검색량:98200,추천런칭월:'9월~10월',질병:'고혈압, 기관지염, 동맥경화, 변비, 빈혈',질병검색량:17230,영양소:'비타민C, 탄닌, 베타카로틴, 칼륨, 식이섬유',구매이유:'',업체:'',비고:''},
+  {시즌:'가을',순위:8,키워드:'쌀',피크월:'9월(25)',시즌지수:1.8,평균검색량:50530,최대검색량:90900,추천런칭월:'7월~8월',질병:'당뇨, 고혈압, 변비, 소화불량, 비만',질병검색량:20050,영양소:'탄수화물, 비타민B1(티아민), 마그네슘, 철분, 식이섬유',구매이유:'',업체:'혈당조절씰, 오르조팜',비고:'확인 필요'},
+  {시즌:'가을',순위:9,키워드:'생강',피크월:'11월(25)',시즌지수:3.14,평균검색량:27321,최대검색량:85740,추천런칭월:'9월~10월',질병:'감기, 동맥경화, 관절염, 소화불량, 항암',질병검색량:25870,영양소:'진저롤, 쇼가올, 비타민C, 마그네슘, 망간',구매이유:'',업체:'',비고:''},
+  {시즌:'가을',순위:10,키워드:'시나노골드사과',피크월:'10월(25)',시즌지수:2.24,평균검색량:37510,최대검색량:84180,추천런칭월:'8월~9월',질병:'당뇨, 콜레스테롤, 고혈압, 동맥경화, 변비',질병검색량:20050,영양소:'퀘르세틴, 폴리페놀, 식이섬유, 비타민C, 칼륨',구매이유:'',업체:'싱싱보따리',비고:'런칭 가능'},
+  // 겨울
+  {시즌:'겨울',순위:1,키워드:'봄동',피크월:'2월(26)',시즌지수:3.89,평균검색량:50555,최대검색량:196900,추천런칭월:'12월~1월',질병:'골다공증, 면역력, 변비, 빈혈, 피부미용',질병검색량:16270,영양소:'비타민K, 비타민C, 칼슘, 철분, 식이섬유',구매이유:'',업체:'보성녹차김치',비고:'봄동김치로 런칭 가능'},
+  {시즌:'겨울',순위:2,키워드:'귤',피크월:'12월(25)',시즌지수:2.7,평균검색량:68218,최대검색량:184100,추천런칭월:'8월',질병:'감기, 고혈압, 변비, 항산화, 피부미용',질병검색량:25870,영양소:'비타민C, 헤스페리딘, 베타카로틴, 식이섬유, 칼륨',구매이유:'면역력 강화·감기 예방, 다이어트·체중 관리, 당뇨·혈당 관리, 피부 미용·콜라겐, 피로 회복·에너지',업체:'',비고:''},
+  {시즌:'겨울',순위:3,키워드:'레드향',피크월:'2월(26)',시즌지수:2.55,평균검색량:70843,최대검색량:180300,추천런칭월:'12월~1월',질병:'감기, 고혈압, 변비, 항산화, 피부미용',질병검색량:25870,영양소:'비타민C, 헤스페리딘, 베타카로틴, 식이섬유, 칼륨',구매이유:'항산화·노화 방지, 당뇨·혈당 관리, 다이어트·체중 관리, 피부 미용·콜라겐, 면역력 강화·감기 예방',업체:'',비고:''},
+  {시즌:'겨울',순위:4,키워드:'피스타치오',피크월:'12월(25)',시즌지수:3.15,평균검색량:56960,최대검색량:179400,추천런칭월:'5월',질병:'당뇨, 콜레스테롤, 고혈압, 비만, 심장질환',질병검색량:20050,영양소:'불포화지방산, 단백질, 비타민B6, 칼륨, 마그네슘',구매이유:'',업체:'',비고:''},
+  {시즌:'겨울',순위:5,키워드:'천혜향',피크월:'2월(26)',시즌지수:2.57,평균검색량:59099,최대검색량:151800,추천런칭월:'12월~1월',질병:'감기, 고혈압, 변비, 항산화, 피부미용',질병검색량:25870,영양소:'비타민C, 헤스페리딘, 베타카로틴, 식이섬유, 칼륨',구매이유:'',업체:'',비고:''},
+  {시즌:'겨울',순위:6,키워드:'콜라비',피크월:'1월(26)',시즌지수:2.93,평균검색량:46282,최대검색량:135700,추천런칭월:'11월~12월',질병:'당뇨, 골다공증, 빈혈, 소화불량, 항암',질병검색량:20050,영양소:'비타민C, 비타민K, 칼슘, 식이섬유, 칼륨',구매이유:'',업체:'',비고:''},
+  {시즌:'겨울',순위:7,키워드:'딸기',피크월:'12월(25)',시즌지수:1.9,평균검색량:69308,최대검색량:131400,추천런칭월:'9월',질병:'당뇨, 고혈압, 빈혈, 항산화, 피부미용',질병검색량:20050,영양소:'비타민C, 엽산, 안토시아닌, 망간, 식이섬유',구매이유:'면역력 강화·감기 예방, 다이어트·체중 관리, 뼈·관절 건강, 당뇨·혈당 관리, 항산화·노화 방지',업체:'',비고:'당뇨인이 먹어도 괜찮은 과일'},
+  {시즌:'겨울',순위:9,키워드:'곶감',피크월:'2월(26)',시즌지수:2.86,평균검색량:43345,최대검색량:123900,추천런칭월:'8월',질병:'고혈압, 기관지염, 동맥경화, 변비, 빈혈',질병검색량:17230,영양소:'비타민A, 탄닌, 비타민C, 칼륨, 식이섬유',구매이유:'',업체:'',비고:''}
+];
+
+var currentSeason = '전체';
+var chartBarInstance = null;
+var chartScatterInstance = null;
+var chartDiseaseInstance = null;
+var chartReasonInstance = null;
+var currentTheme = localStorage.getItem('season-viz-theme') || 'light';
+
+function seasonGetSeasonColor(s) {
+  var isDark = document.getElementById('season-tab-root').classList.contains('theme-dark');
+  var map = {
+    '봄': isDark ? '#34d399' : '#10b981',
+    '여름': isDark ? '#f59e0b' : '#d97706',
+    '가을': isDark ? '#f97316' : '#ea580c',
+    '겨울': isDark ? '#60a5fa' : '#3b82f6'
+  };
+  return map[s] || '#e5007e';
+}
+
+function seasonFmtNum(n) {
+  if (!n && n !== 0) return '-';
+  return n.toLocaleString('ko-KR');
+}
+
+function seasonGetFilteredData() {
+  if (currentSeason === '전체') return ALL_DATA;
+  return ALL_DATA.filter(function(d) { return d.시즌 === currentSeason; });
+}
+
+function seasonGetLaunchStatus(d) {
+  var b = (d.비고 || '').trim();
+  if (b.indexOf('런칭 완료') >= 0) return {label:'런칭 완료', cls:'launch-done'};
+  if (b.indexOf('런칭 가능') >= 0 || b.indexOf('런칭 가능') >= 0) return {label:'런칭 가능', cls:'launch-ready'};
+  if (b.indexOf('확인 필요') >= 0 || b.indexOf('확인') >= 0) return {label:'확인 필요', cls:'launch-check'};
+  if (d.업체) return {label:'업체 있음', cls:'launch-ready'};
+  return null;
+}
+
+// ===== KPI UPDATE =====
+function seasonUpdateKPIs() {
+  var data = seasonGetFilteredData();
+  document.getElementById('kpi-total').textContent = data.length;
+  var avgSearch = Math.round(data.reduce(function(s,d){return s+d.평균검색량;},0) / data.length);
+  document.getElementById('kpi-avg-search').textContent = seasonFmtNum(avgSearch);
+  var maxS = data.reduce(function(m,d){return d.시즌지수 > m.시즌지수 ? d : m;}, data[0]);
+  document.getElementById('kpi-max-season').textContent = maxS ? maxS.시즌지수.toFixed(2) : '-';
+  document.getElementById('kpi-max-season-name').textContent = maxS ? maxS.키워드 : '';
+  var launchable = data.filter(function(d){
+    var b = (d.비고||'').trim();
+    return b.indexOf('런칭 완료')>=0 || b.indexOf('런칭 가능')>=0 || d.업체;
+  }).length;
+  document.getElementById('kpi-launchable').textContent = launchable;
+}
+
+// ===== SEASON SUMMARY =====
+function seasonBuildSummary() {
+  var seasons = ['봄','여름','가을','겨울'];
+  var cls = ['spring','summer','fall','winter'];
+  var grid = document.getElementById('summary-grid');
+  grid.innerHTML = '';
+  seasons.forEach(function(s, i) {
+    var data = ALL_DATA.filter(function(d){return d.시즌===s;});
+    var avgSearch = Math.round(data.reduce(function(sum,d){return sum+d.평균검색량;},0)/data.length);
+    var maxSI = Math.max.apply(null, data.map(function(d){return d.시즌지수;}));
+    var top = data[0];
+    var card = document.createElement('div');
+    card.className = 'summary-card ' + cls[i] + ' reveal';
+    card.innerHTML = '<div class="summary-season '+cls[i]+'">'+s+' 시즌</div>'+
+      '<div class="summary-top">'+top.키워드+'</div>'+
+      '<div style="font-size:0.78rem;color:var(--text-secondary);">1위 / 최대검색량 '+seasonFmtNum(top.최대검색량)+'</div>'+
+      '<div class="summary-stats">'+
+        '<div class="stat-row"><span class="stat-label">상품 수</span><span class="stat-val">'+data.length+'개</span></div>'+
+        '<div class="stat-row"><span class="stat-label">평균 검색량</span><span class="stat-val">'+seasonFmtNum(avgSearch)+'</span></div>'+
+        '<div class="stat-row"><span class="stat-label">최고 시즌지수</span><span class="stat-val">'+maxSI.toFixed(2)+'</span></div>'+
+      '</div>';
+    grid.appendChild(card);
+    setTimeout(function(el){ revealObserver.observe(el); }, 100, card);
+  });
+}
+
+// ===== TABLE =====
+function seasonBuildTable() {
+  var data = seasonGetFilteredData();
+  var search = (document.getElementById('tableSearch').value || '').toLowerCase();
+  if (search) {
+    data = data.filter(function(d){
+      return d.키워드.toLowerCase().indexOf(search)>=0 ||
+             d.질병.toLowerCase().indexOf(search)>=0 ||
+             d.영양소.toLowerCase().indexOf(search)>=0;
+    });
+  }
+  var tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  var noData = document.getElementById('noDataMsg');
+  if (data.length === 0) { noData.style.display='block'; return; }
+  noData.style.display='none';
+  var maxSearch = Math.max.apply(null, ALL_DATA.map(function(d){return d.평균검색량;}));
+  document.getElementById('table-title').textContent = currentSeason === '전체' ? '전체 상품 목록 ('+data.length+'개)' : currentSeason+' 시즌 상품 ('+data.length+'개)';
+  data.forEach(function(d, idx) {
+    var rankCls = d.순위===1?'rank-1':d.순위===2?'rank-2':d.순위===3?'rank-3':'rank-other';
+    var seasonCls = {봄:'spring',여름:'summer',가을:'fall',겨울:'winter'}[d.시즌]||'';
+    var pct = Math.round((d.평균검색량/maxSearch)*100);
+    var barColor = seasonGetSeasonColor(d.시즌);
+    var nutrients = d.영양소.split(',').slice(0,3).map(function(n){
+      return '<span class="nt">'+n.trim()+'</span>';
+    }).join('');
+    var launchInfo = seasonGetLaunchStatus(d);
+    var launchHtml = launchInfo ? '<span class="launch-tag '+launchInfo.cls+'">'+launchInfo.label+'</span>' : '<span style="color:var(--text-secondary);font-size:0.75rem;">'+(d.업체||'—')+'</span>';
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><span class="rank-badge '+rankCls+'">'+d.순위+'</span></td>'+
+      '<td><span class="season-dot"><span class="dot dot-'+seasonCls+'"></span>'+d.시즌+'</span></td>'+
+      '<td style="font-weight:600;">'+d.키워드+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:0.82rem;">'+d.피크월+'</td>'+
+      '<td style="font-weight:700;color:'+barColor+';">'+d.시즌지수.toFixed(2)+'</td>'+
+      '<td style="font-weight:600;">'+seasonFmtNum(d.평균검색량)+'</td>'+
+      '<td><div class="search-bar-mini"><div class="search-bar-fill" style="width:'+pct+'%;background:'+barColor+';"></div></div></td>'+
+      '<td style="font-size:0.8rem;color:var(--text-secondary);">'+d.추천런칭월+'</td>'+
+      '<td><div class="disease-tags">'+d.질병.split(',').map(function(t){return '<span class="dt">'+t.trim()+'</span>';}).join('')+'</div><div class="disease-vol">검색량 '+seasonFmtNum(d.질병검색량)+'</div></td>'+
+      '<td><div class="nutrient-tags">'+nutrients+'</div></td>'+
+      '<td>'+launchHtml+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function seasonFilterTable() { seasonBuildTable(); }
+
+// ===== BAR CHART =====
+function seasonBuildBarChart() {
+  var data = seasonGetFilteredData().slice().sort(function(a,b){return b.평균검색량-a.평균검색량;}).slice(0,20);
+  var labels = data.map(function(d){return d.키워드;});
+  var values = data.map(function(d){return d.평균검색량;});
+  var colors = data.map(function(d){return seasonGetSeasonColor(d.시즌);});
+  var isDark = document.getElementById('season-tab-root').classList.contains('theme-dark');
+  var gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+  var textColor = isDark ? '#888' : '#666';
+  if (chartBarInstance) { chartBarInstance.destroy(); chartBarInstance = null; }
+  var ctx = document.getElementById('searchBarChart').getContext('2d');
+  chartBarInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ' 평균검색량: ' + seasonFmtNum(ctx.parsed.y); }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor, font: { size: 11 }, maxRotation: 40 },
+          grid: { color: gridColor }
+        },
+        y: {
+          ticks: { color: textColor, font: { size: 11 }, callback: function(v){return (v/1000)+'K';} },
+          grid: { color: gridColor }
+        }
+      },
+      layout: { padding: { top: 10, right: 10, bottom: 0, left: 0 } }
+    }
+  });
+  document.getElementById('bar-chart-title').textContent = (currentSeason==='전체'?'시즌별':''+currentSeason) + ' 평균 검색량 TOP '+ Math.min(data.length, 20);
+}
+
+// ===== SCATTER CHART =====
+function seasonBuildScatterChart() {
+  var data = seasonGetFilteredData();
+  var isDark = document.getElementById('season-tab-root').classList.contains('theme-dark');
+  var gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+  var textColor = isDark ? '#888' : '#666';
+  var seasons = ['봄','여름','가을','겨울'];
+  var datasets = seasons.map(function(s) {
+    var sData = data.filter(function(d){return d.시즌===s;});
+    return {
+      label: s,
+      data: sData.map(function(d){return {x: d.시즌지수, y: d.평균검색량, label: d.키워드};}),
+      backgroundColor: seasonGetSeasonColor(s) + 'cc',
+      borderColor: seasonGetSeasonColor(s),
+      pointRadius: 7,
+      pointHoverRadius: 9
+    };
+  }).filter(function(ds){return ds.data.length>0;});
+  if (chartScatterInstance) { chartScatterInstance.destroy(); chartScatterInstance = null; }
+  var ctx = document.getElementById('scatterChart').getContext('2d');
+  chartScatterInstance = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: textColor, font: { size: 11 }, boxWidth: 10, boxHeight: 10, borderRadius: 3 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var p = ctx.raw;
+              return ' '+p.label+' | 시즌지수 '+p.x+' | '+seasonFmtNum(p.y);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: '시즌지수', color: textColor, font: {size:11} },
+          ticks: { color: textColor, font: {size:10} },
+          grid: { color: gridColor }
+        },
+        y: {
+          title: { display: true, text: '평균검색량', color: textColor, font: {size:11} },
+          ticks: { color: textColor, font: {size:10}, callback: function(v){return (v/1000)+'K';} },
+          grid: { color: gridColor }
+        }
+      },
+      layout: { padding: 10 }
+    }
+  });
+}
+
+// ===== DISEASE CHART =====
+function seasonBuildDiseaseChart() {
+  var data = ALL_DATA;
+  var diseaseCounts = {};
+  data.forEach(function(d) {
+    var diseases = d.질병.split(',').map(function(s){return s.trim();});
+    diseases.forEach(function(dis){
+      if (!dis) return;
+      diseaseCounts[dis] = (diseaseCounts[dis]||0) + 1;
+    });
+  });
+  var sorted = Object.keys(diseaseCounts).sort(function(a,b){return diseaseCounts[b]-diseaseCounts[a];}).slice(0,12);
+  var isDark = document.getElementById('season-tab-root').classList.contains('theme-dark');
+  var gridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+  var textColor = isDark ? '#888' : '#666';
+  var accent = isDark ? '#e5007e' : '#d1006f';
+  var colors = ['#e5007e','#ff4da6','#8b5cf6','#f59e0b','#10b981','#06b6d4','#f43f5e','#3b82f6','#34d399','#f97316','#a78bfa','#60a5fa'];
+  if (chartDiseaseInstance) { chartDiseaseInstance.destroy(); chartDiseaseInstance = null; }
+  var ctx = document.getElementById('diseaseChart').getContext('2d');
+  chartDiseaseInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted,
+      datasets: [{
+        data: sorted.map(function(k){return diseaseCounts[k];}),
+        backgroundColor: sorted.map(function(_,i){return colors[i%colors.length]+'cc';}),
+        borderColor: sorted.map(function(_,i){return colors[i%colors.length];}),
+        borderWidth: 1,
+        borderRadius: 4
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return ' '+c.parsed.x+'개 상품'; } } }
+      },
+      scales: {
+        x: {
+          ticks: { color: textColor, font:{size:11}, stepSize:1 },
+          grid: { color: gridColor }
+        },
+        y: {
+          ticks: { color: textColor, font:{size:11} },
+          grid: { display: false }
+        }
+      },
+      layout: { padding: 10 }
+    }
+  });
+}
+
+// ===== REASON CHART =====
+function seasonBuildReasonChart() {
+  var reasonCounts = {};
+  ALL_DATA.forEach(function(d){
+    if (!d.구매이유) return;
+    d.구매이유.split(',').forEach(function(r){
+      var t = r.trim();
+      if (!t) return;
+      reasonCounts[t] = (reasonCounts[t]||0)+1;
+    });
+  });
+  var sorted = Object.keys(reasonCounts).sort(function(a,b){return reasonCounts[b]-reasonCounts[a];}).slice(0,8);
+  var isDark = document.getElementById('season-tab-root').classList.contains('theme-dark');
+  var textColor = isDark ? '#888' : '#666';
+  var colors = ['#e5007e','#ff4da6','#8b5cf6','#f59e0b','#10b981','#06b6d4','#f43f5e','#3b82f6'];
+  if (chartReasonInstance) { chartReasonInstance.destroy(); chartReasonInstance = null; }
+  var ctx = document.getElementById('reasonChart').getContext('2d');
+  chartReasonInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: sorted.map(function(k){return k.length>12?k.slice(0,12)+'…':k;}),
+      datasets: [{
+        data: sorted.map(function(k){return reasonCounts[k];}),
+        backgroundColor: colors.map(function(c){return c+'cc';}),
+        borderColor: colors,
+        borderWidth: 2,
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: textColor, font:{size:10}, boxWidth:10, boxHeight:10, padding:8 }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(c){ return ' '+c.label+': '+c.parsed+'회'; }
+          }
+        }
+      },
+      layout: { padding: 10 }
+    }
+  });
+}
+
+// ===== FILTER SEASON =====
+function seasonFilterSeason(s) {
+  currentSeason = s;
+  document.getElementById('season-tab-root').querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.classList.toggle('active', btn.dataset.season === s);
+  });
+  seasonUpdateKPIs();
+  seasonBuildTable();
+  setTimeout(seasonBuildBarChart, 50);
+  setTimeout(seasonBuildScatterChart, 80);
+}
+
+// ===== THEME =====
+function seasonApplyTheme(t) {
+  document.getElementById('season-tab-root').className = 'season-scope theme-' + t;
+  document.getElementById('season-themeLabel').textContent = t === 'dark' ? '라이트 모드' : '다크 모드';
+  localStorage.setItem('season-viz-theme', t);
+  currentTheme = t;
+  seasonOnThemeChange();
+}
+function seasonCycleTheme() { seasonApplyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+function seasonOnThemeChange() {
+  setTimeout(function(){
+    seasonBuildBarChart();
+    seasonBuildScatterChart();
+    seasonBuildDiseaseChart();
+    seasonBuildReasonChart();
+  }, 50);
+}
+
+// ===== MENU =====
+function seasonToggleMenu() {
+  var d = document.getElementById('season-vizMenuDropdown');
+  if (d) d.classList.toggle('open');
+}
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.viz-menu')) {
+    var d = document.getElementById('season-vizMenuDropdown');
+    if (d) d.classList.remove('open');
+  }
+});
+
+// ===== SCROLL REVEAL =====
+var revealObserver = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.getElementById('season-tab-root').querySelectorAll('.reveal').forEach(function(el){ revealObserver.observe(el); });
+
+// ===== DOWNLOAD =====
+async function seasonDownloadImage() {
+  var menu = document.getElementById('season-tab-root').querySelector('.viz-menu');
+  menu.style.display = 'none';
+  try {
+    var url = await htmlToImage.toPng(document.getElementById('season-tab-root'), { quality: 1, pixelRatio: 2 });
+    var a = document.createElement('a'); a.href = url;
+    a.download = '농산물-시즌-키워드-대시보드.png'; a.click();
+  } catch(e) { console.error(e); }
+  menu.style.display = '';
+}
+
+// ===== INIT =====
+seasonApplyTheme(currentTheme);
+seasonUpdateKPIs();
+seasonBuildSummary();
+seasonBuildTable();
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    seasonBuildBarChart();
+    seasonBuildScatterChart();
+    seasonBuildDiseaseChart();
+    seasonBuildReasonChart();
+    document.getElementById('season-tab-root').querySelectorAll('.reveal').forEach(function(el){ revealObserver.observe(el); });
+  }, 200);
+});
+
+window.seasonToggleMenu = seasonToggleMenu;
+window.seasonCycleTheme = seasonCycleTheme;
+window.seasonDownloadImage = seasonDownloadImage;
+window.seasonFilterSeason = seasonFilterSeason;
+window.seasonFilterTable = seasonFilterTable;
+window.seasonRefreshCharts = function(){
+  seasonBuildBarChart();
+  seasonBuildScatterChart();
+  seasonBuildDiseaseChart();
+  seasonBuildReasonChart();
+};
+})();
+</script>
+<script>
+(function(){
+
+// === DATA ===
+var REPLACE_TABLE = [
+  ['개선', '찾는'],
+  ['예방', '챙기는'],
+  ['치료', '습관'],
+  ['효과', '이유'],
+  ['완화', '부담 덜한'],
+  ['면역력', '환절기'],
+  ['혈당 관리', '덜 단 음식'],
+  ['다이어트', '가볍게 먹는'],
+  ['항산화', '오래 사랑받는'],
+  ['염증', '자극적인 음식 부담'],
+  ['변비 해결', '화장실 습관 고민'],
+  ['갱년기 개선', '40대 이후 식탁'],
+  ['관절 건강', '부모님 식사 고민'],
+  ['해독', '부담 없이'],
+  ['노화 방지', '시간이 지나도 찾는'],
+  ['면역 강화', '환절기 챙기는'],
+];
+
+var EXAMPLES = [
+  { item: '배도라지', bad: '감기에 좋은 배도라지', good: '환절기에 찾는 집이 많아지는 배도라지' },
+  { item: '양배추', bad: '위 건강에 도움', good: '자극적인 음식이 부담될 때 찾는 식재료' },
+  { item: '호박', bad: '붓기 제거', good: '아침에 몸이 무겁게 느껴질 때 찾는 음식' },
+  { item: '검은콩', bad: '갱년기 개선', good: '40대 이후 식탁에서 다시 찾게 되는 음식' },
+  { item: '푸룬', bad: '변비 개선', good: '화장실 습관 때문에 간식을 바꾸는 사람들' },
+  { item: '마늘', bad: '혈압 낮추는 음식', good: '오래전부터 밥상에 빠지지 않던 이유' },
+];
+
+var BAD_CHECKS = [
+  '효능을 단정하고 있는가?',
+  '질병 해결처럼 보이는가?',
+  '건강기능식품처럼 말하고 있는가?',
+  '의학적 효과를 암시하고 있는가?',
+  '플랫폼 심사를 통과하기 어려운 표현인가?',
+];
+
+var GOOD_CHECKS = [
+  '생활 상황 중심인가?',
+  '공감 기반인가?',
+  '왜 찾게 되는지 설명하는가?',
+  '음식 습관 이야기인가?',
+  '브랜드가 원물 큐레이터처럼 말하고 있는가?',
+];
+
+var ALL_FORBIDDEN = [
+  '치료','예방','개선','완화','치유','회복','제거','억제','낮춘다','없앤다','잡는다','케어','해결',
+  '당뇨','고혈압','암','아토피','비염','관절염','치매','우울증','지방간','심혈관질환','위염','역류성식도염','갑상선','불면증',
+  '기능성','면역력 강화','항산화','항염','해독','디톡스','혈액순환 개선','지방 연소','활성산소 제거','콜레스테롤 개선','혈당 조절','장 건강 개선',
+  '의사 추천','약사 추천','전문의 인증','임상 입증','검증 완료','의학적으로 증명','논문 인증','병원 납품','처방 수준',
+  '살 빠지는','지방 태우는','뱃살 제거','붓기 제거','체중 감량 보장','먹기만 해도','다이어트 효과',
+  '성장 발달','키 크는','면역 키우는','집중력 향상','두뇌 발달','아토피 개선','변비 해결',
+  '항암','노화 방지','면역력','혈당','콜레스테롤','다이어트','갱년기',
+];
+
+var WARN_WORDS = [
+  '좋은','도움','추천','영양','건강','효능','성분','강화',
+];
+
+// === BUILD REPLACE TABLE ===
+function guideBuildReplaceTable() {
+  var tbody = document.getElementById('compareTableBody');
+  tbody.innerHTML = '';
+  REPLACE_TABLE.forEach(function(row) {
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><div class="td-bad"><span class="icon-x"><svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="var(--negative)" stroke-width="2.5"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg></span>' + row[0] + '</div></td>' +
+      '<td><div class="td-good"><span class="icon-o"><svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="var(--positive)" stroke-width="2.5"><polyline points="1.5,5 4,7.5 8.5,2"/></svg></span>' + row[1] + '</div></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// === BUILD EXAMPLES ===
+function guideBuildExamples() {
+  var grid = document.getElementById('exampleGrid');
+  grid.innerHTML = '';
+  EXAMPLES.forEach(function(ex) {
+    var card = document.createElement('div');
+    card.className = 'example-card';
+    card.innerHTML =
+      '<div class="example-header">' + ex.item + '</div>' +
+      '<div class="example-body">' +
+        '<div class="ex-row">' +
+          '<div class="ex-label">❌ 금지</div>' +
+          '<div class="ex-bad">' + ex.bad + '</div>' +
+        '</div>' +
+        '<div class="ex-row">' +
+          '<div class="ex-label">⭕ 권장</div>' +
+          '<div class="ex-good">' + ex.good + '</div>' +
+        '</div>' +
+      '</div>';
+    grid.appendChild(card);
+  });
+}
+
+// === BUILD CHECKLISTS ===
+function guideBuildChecklists() {
+  var bad = document.getElementById('checklistBad');
+  var good = document.getElementById('checklistGood');
+  BAD_CHECKS.forEach(function(c) {
+    var div = document.createElement('div');
+    div.className = 'checklist-item';
+    div.innerHTML = '<div class="check-mark" onclick="guideToggleCheck(this)"></div><div class="checklist-text">' + c + '</div>';
+    bad.appendChild(div);
+  });
+  GOOD_CHECKS.forEach(function(c) {
+    var div = document.createElement('div');
+    div.className = 'checklist-item';
+    div.innerHTML = '<div class="check-mark" onclick="guideToggleCheck(this)"></div><div class="checklist-text">' + c + '</div>';
+    good.appendChild(div);
+  });
+}
+
+function guideToggleCheck(el) {
+  el.classList.toggle('done');
+  el.textContent = el.classList.contains('done') ? '✓' : '';
+}
+
+// === CHECKER ===
+function guideRunChecker() {
+  var input = document.getElementById('checkerInput').value.trim();
+  var resultEl = document.getElementById('checkerResult');
+  if (!input) { resultEl.style.display = 'none'; return; }
+  resultEl.style.display = 'block';
+
+  var foundForbidden = [];
+  var foundWarn = [];
+
+  ALL_FORBIDDEN.forEach(function(w) {
+    if (input.indexOf(w) >= 0) foundForbidden.push(w);
+  });
+  WARN_WORDS.forEach(function(w) {
+    if (input.indexOf(w) >= 0 && foundForbidden.indexOf(w) < 0) foundWarn.push(w);
+  });
+
+  if (foundForbidden.length > 0) {
+    resultEl.innerHTML =
+      '<div class="result-danger">' +
+        '<div class="result-title">⛔ 금지 표현이 포함되어 있습니다</div>' +
+        '<div class="result-detail">아래 표현은 플랫폼 정책 위반 및 소비자 오인 유발 가능성이 있습니다.</div>' +
+        '<div class="result-hits">' +
+          foundForbidden.map(function(w){return '<span class="hit-tag">' + w + '</span>';}).join('') +
+          foundWarn.map(function(w){return '<span class="hit-tag warn">' + w + '</span>';}).join('') +
+        '</div>' +
+      '</div>';
+  } else if (foundWarn.length > 0) {
+    resultEl.innerHTML =
+      '<div class="result-danger" style="background:var(--warn-bg);border-color:var(--warn-border);">' +
+        '<div class="result-title" style="color:var(--warning);">⚠️ 주의가 필요한 표현이 있습니다</div>' +
+        '<div class="result-detail">직접 금지어는 아니지만 맥락에 따라 효능 암시로 해석될 수 있습니다.</div>' +
+        '<div class="result-hits">' + foundWarn.map(function(w){return '<span class="hit-tag warn">'+w+'</span>';}).join('') + '</div>' +
+      '</div>';
+  } else {
+    resultEl.innerHTML =
+      '<div class="result-safe">' +
+        '<div class="result-title">✅ 금지 표현이 없습니다</div>' +
+        '<div class="result-detail">이 문구는 삼초마을 표현 기준에 부합합니다. 맥락상 효능을 암시하지 않는지 최종 확인해 주세요.</div>' +
+      '</div>';
+  }
+}
+
+document.getElementById('checkerInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') guideRunChecker();
+});
+
+// === THEME ===
+var currentTheme = localStorage.getItem('guide-viz-theme') || 'light';
+function guideApplyTheme(t) {
+  document.getElementById('guide-tab-root').className = 'guide-scope theme-' + t;
+  document.getElementById('guide-themeLabel').textContent = t === 'dark' ? '라이트 모드' : '다크 모드';
+  localStorage.setItem('guide-viz-theme', t);
+  currentTheme = t;
+}
+function guideCycleTheme() { guideApplyTheme(currentTheme === 'dark' ? 'light' : 'dark'); }
+guideApplyTheme(currentTheme);
+
+// === MENU ===
+function guideToggleMenu() {
+  var d = document.getElementById('guide-vizMenuDropdown');
+  if (d) d.classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.viz-menu')) {
+    var d = document.getElementById('guide-vizMenuDropdown');
+    if (d) d.classList.remove('open');
+  }
+});
+
+// === SCROLL REVEAL ===
+var revealObserver = new IntersectionObserver(function(entries) {
+  entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('visible'); revealObserver.unobserve(e.target); } });
+}, { threshold: 0.08 });
+document.getElementById('guide-tab-root').querySelectorAll('.reveal').forEach(function(el) { revealObserver.observe(el); });
+
+// === DOWNLOAD ===
+async function guideDownloadImage() {
+  var menu = document.getElementById('guide-tab-root').querySelector('.viz-menu');
+  menu.style.display = 'none';
+  try {
+    var url = await htmlToImage.toPng(document.getElementById('guide-tab-root'), { quality: 1, pixelRatio: 2 });
+    var a = document.createElement('a'); a.href = url;
+    a.download = '삼초마을-금지표현-가이드.png'; a.click();
+  } catch(e) { console.error(e); }
+  menu.style.display = '';
+}
+
+// === INIT ===
+guideBuildReplaceTable();
+guideBuildExamples();
+guideBuildChecklists();
+
+window.guideToggleMenu = guideToggleMenu;
+window.guideCycleTheme = guideCycleTheme;
+window.guideDownloadImage = guideDownloadImage;
+window.guideRunChecker = guideRunChecker;
+window.guideToggleCheck = guideToggleCheck;
+})();
+</script>
+<script>
+(function(){
+  var GROUP_PAGE_ID = { quote:'shell-page-quote', season:'shell-page-season', guide:'shell-page-guide' };
+
+  // ── 그룹(대탭) 펼침/접힘 + 메인 페이지 전환 ──
+  window.shellToggleGroup = function(group){
+    var allGroups = ['quote','season','guide'];
+    allGroups.forEach(function(g){
+      var el = document.getElementById('group-'+g);
+      var btn = el.querySelector('.shell-group-btn');
+      if(g === group){
+        el.classList.add('open');
+        btn.classList.add('active');
+      } else {
+        el.classList.remove('open');
+        btn.classList.remove('active');
+      }
+    });
+    // 메인 페이지 전환
+    allGroups.forEach(function(g){
+      document.getElementById(GROUP_PAGE_ID[g]).classList.toggle('active', g === group);
+    });
+    // 시즌 탭으로 들어가면 차트 재생성 (display:none 상태에서 그려졌던 차트 크기 보정)
+    if(group === 'season' && window.seasonRefreshCharts){
+      setTimeout(window.seasonRefreshCharts, 30);
+    }
+    shellCloseMobile();
+  };
+
+  // ── 하위 탭(서브탭) 선택 ──
+  window.shellSelect = function(group, sub, btnEl){
+    // 그룹이 안 열려있으면 먼저 그룹 전환
+    var groupBtn = document.getElementById('group-'+group).querySelector('.shell-group-btn');
+    if(!groupBtn.classList.contains('active')){
+      window.shellToggleGroup(group);
+    }
+    // 서브링크 active 토글 (같은 그룹 내부에서만)
+    var subnav = btnEl.closest('.shell-subnav');
+    subnav.querySelectorAll('.shell-sublink').forEach(function(b){ b.classList.remove('active'); });
+    btnEl.classList.add('active');
+
+    if(group === 'quote'){
+      // produce-quote 자체 탭 전환 함수 호출 (해당 섹션 내부의 .tab 버튼이 없으므로 더미 엘리먼트 패스 불필요 처리)
+      var sectionEl = document.getElementById('sec-'+sub);
+      document.querySelectorAll('#shell-page-quote .section').forEach(function(s){ s.classList.remove('active'); });
+      if(sectionEl) sectionEl.classList.add('active');
+    } else if(group === 'season') {
+      document.querySelectorAll('#shell-page-season .subtab-panel').forEach(function(p){
+        p.style.display = (p.getAttribute('data-subtab-panel') === sub) ? '' : 'none';
+      });
+      if(sub === 'charts' || sub === 'disease'){
+        setTimeout(function(){ if(window.seasonRefreshCharts) window.seasonRefreshCharts(); }, 30);
+      }
+    } else if(group === 'guide') {
+      document.querySelectorAll('#shell-page-guide .subtab-panel').forEach(function(p){
+        p.style.display = (p.getAttribute('data-subtab-panel') === sub) ? '' : 'none';
+      });
+    }
+  };
+
+  // ── 모바일 사이드바 ──
+  window.shellOpenMobile = function(){
+    document.getElementById('shell-sidebar').classList.add('shell-open');
+    document.getElementById('shell-overlay').classList.add('shell-open');
+  };
+  window.shellCloseMobile = function(){
+    document.getElementById('shell-sidebar').classList.remove('shell-open');
+    document.getElementById('shell-overlay').classList.remove('shell-open');
+  };
+
+  // ── 셸 다크모드 (사이드바 + 빈 배경 영역 전용. 각 탭 콘텐츠 자체 다크모드와는 독립) ──
+  window.shellToggleTheme = function(){
+    var html = document.documentElement;
+    var isDark = html.classList.contains('shell-dark');
+    html.classList.remove('shell-dark','shell-light');
+    html.classList.add(isDark ? 'shell-light' : 'shell-dark');
+    try { localStorage.setItem('shell-theme', isDark ? 'light' : 'dark'); } catch(e){}
+  };
+
+  // 초기 테마 적용
+  try {
+    var saved = localStorage.getItem('shell-theme');
+    document.documentElement.classList.add(saved === 'dark' ? 'shell-dark' : 'shell-light');
+  } catch(e){
+    document.documentElement.classList.add('shell-light');
+  }
+})();
+
 </script>
 </body>
 </html>
