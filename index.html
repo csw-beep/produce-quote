@@ -149,6 +149,9 @@ body {
 .quote-scope .tab.active {background:#3B6D11;color:#fff;border-color:#3B6D11;font-weight:500}
 .quote-scope .section {display:none}
 .quote-scope .section.active {display:block}
+.quote-scope .undo-bar {display:flex;align-items:center;justify-content:space-between;gap:10px;background:#FFF7E6;border:1px solid #FCE4B0;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:12.5px;color:#92660A;flex-wrap:wrap}
+.quote-scope .undo-btn {background:#fff;border:1px solid #F0C772;color:#92660A;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:background .15s}
+.quote-scope .undo-btn:hover {background:#FFF1D6}
 .quote-scope .stats-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.25rem}
 .quote-scope .stat-card {background:#fff;border-radius:10px;padding:1rem;border:1px solid #eee}
 .quote-scope .stat-label {font-size:11px;color:#888;margin-bottom:4px}
@@ -184,6 +187,9 @@ body {
 .quote-scope .fg label {font-size:11px;color:#888;font-weight:500}
 .quote-scope .fg input, .quote-scope .fg select {font-size:13px;height:36px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#111;padding:0 10px;width:100%;outline:none}
 .quote-scope .fg input:focus, .quote-scope .fg select:focus {border-color:#3B6D11}
+.quote-scope .unit-combo {display:flex;gap:6px}
+.quote-scope .unit-combo .unit-qty-input {width:64px;flex-shrink:0;text-align:center;padding:0 4px}
+.quote-scope .unit-combo select {flex:1;min-width:0}
 .quote-scope .vendor-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:1.25rem}
 .quote-scope .vc {background:#fff;border:1px solid #eee;border-radius:12px;padding:1.25rem}
 .quote-scope .vc-name {font-size:14px;font-weight:600;color:#111;margin-bottom:2px}
@@ -905,6 +911,10 @@ body {
 
 <!-- 비교표 -->
 <div id="sec-compare" class="section active">
+  <div class="undo-bar" id="undo-bar" style="display:none">
+    <span id="undo-label"></span>
+    <button class="undo-btn" onclick="undoLastImport()">↩ 되돌리기</button>
+  </div>
   <div class="stats-grid" id="stats"></div>
   <div class="card">
     <div class="card-title">품목별 가격 비교 <span class="result-count" id="result-count"></span></div>
@@ -1543,18 +1553,60 @@ async function saveData(){
   } catch(e){ setSyncState('err','저장 실패'); }
 }
 
+/* ── 되돌리기 (업로드 직전 상태, 최근 1단계만 보관) ── */
+let undoSnapshot = null; // {label, vendors, items, savedAt}
+
+async function saveUndoSnapshot(label){
+  undoSnapshot = {
+    label,
+    vendors: JSON.parse(JSON.stringify(vendors)),
+    items: JSON.parse(JSON.stringify(items)),
+    savedAt: new Date().toISOString()
+  };
+  try { await fbSet('/undo_snapshot', undoSnapshot); } catch(e){ /* 스냅샷 저장 실패는 업로드 자체를 막지 않음 */ }
+  updateUndoBar();
+}
+
+async function undoLastImport(){
+  if (!undoSnapshot){ showToast('되돌릴 이전 상태가 없습니다', true); return; }
+  if (!confirm('업로드 직전 상태로 되돌릴까요? 이후 변경 내용은 사라집니다.')) return;
+  vendors = undoSnapshot.vendors;
+  items = undoSnapshot.items;
+  undoSnapshot = null;
+  try { await fbSet('/undo_snapshot', null); } catch(e){}
+  await saveData();
+  renderAll();
+  updateUndoBar();
+  showToast('이전 상태로 되돌렸습니다');
+}
+
+function updateUndoBar(){
+  const bar = document.getElementById('undo-bar');
+  if (!bar) return;
+  if (undoSnapshot) {
+    bar.style.display = 'flex';
+    document.getElementById('undo-label').textContent =
+      `"${undoSnapshot.label}" 시점으로 되돌릴 수 있어요`;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
 async function loadData(){
   setSyncState('busy','불러오는 중...');
   try{
     const v = await fbGet('/vendors');
     const it = await fbGet('/items');
+    const undo = await fbGet('/undo_snapshot');
     if (v && Array.isArray(v)) vendors = v;
     if (it && Array.isArray(it)) items = it;
+    if (undo && undo.items) undoSnapshot = undo;
     setSyncState('ok','동기화됨');
   } catch(e){
     setSyncState('err','연결 실패');
   }
   renderAll();
+  updateUndoBar();
 }
 
 async function resetData(){
@@ -1634,6 +1686,7 @@ function renderAll(){
   updateDropdowns();
   renderStats(); renderTable(); renderVendors(); renderWinnerList();
   renderAddForm(); renderManageList(); renderVendorSettings();
+  updateUndoBar();
 }
 
 function renderStats(){
@@ -1830,7 +1883,12 @@ function renderAddForm(){
   el.innerHTML = `
     <div class="fg"><label>업체명</label><select id="add-vendor">${vopts}</select></div>
     <div class="fg"><label>품목명</label><input id="add-name" placeholder="예: 사과"/></div>
-    <div class="fg"><label>단위</label><select id="add-unit"><option>kg</option><option>박스</option><option>개</option><option>포기</option><option>단</option><option>망</option></select></div>
+    <div class="fg"><label>단위</label>
+      <div class="unit-combo">
+        <input id="add-unit-qty" type="number" min="0" step="any" placeholder="2" class="unit-qty-input"/>
+        <select id="add-unit-type"><option>kg</option><option>박스</option><option>개</option><option>포기</option><option>단</option><option>망</option></select>
+      </div>
+    </div>
     <div class="fg"><label>공급가</label><input id="add-price" type="number" placeholder="0" min="0"/></div>
     <div class="fg"><label>비고</label><input id="add-note" placeholder="선택사항"/></div>
     <div class="fg"><label>&nbsp;</label><button class="btn-p" onclick="addItem()">➕ 추가</button></div>
@@ -1872,7 +1930,9 @@ async function addItem(){
   const vendor = document.getElementById('add-vendor')?.value;
   const name = document.getElementById('add-name')?.value.trim();
   if (!name){ showToast('품목명을 입력해주세요', true); return; }
-  const unit = document.getElementById('add-unit')?.value || '개';
+  const qtyRaw = document.getElementById('add-unit-qty')?.value.trim();
+  const unitType = document.getElementById('add-unit-type')?.value || '개';
+  const unit = qtyRaw ? `${qtyRaw}${unitType}` : unitType;
   const pv = document.getElementById('add-price')?.value;
   const price = pv===''||pv==null ? null : parseInt(pv);
   const note = document.getElementById('add-note')?.value.trim() || '';
@@ -1883,6 +1943,8 @@ async function addItem(){
   document.getElementById('add-name').value = '';
   document.getElementById('add-price').value = '';
   document.getElementById('add-note').value = '';
+  const qtyEl = document.getElementById('add-unit-qty');
+  if (qtyEl) qtyEl.value = '';
 }
 
 async function deleteItem(id){
@@ -1918,10 +1980,9 @@ async function renameVendor(vi, newName){
 }
 
 function quoteSwitchTab(id, el){
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#shell-page-quote .section').forEach(s => s.classList.remove('active'));
   document.getElementById('sec-'+id).classList.add('active');
-  el.classList.add('active');
+  if(el && el.classList) el.classList.add('active');
 }
 
 function setMode(m){
@@ -2064,9 +2125,12 @@ async function importData(){
 
   if (!rows.length){ showToast('가져올 데이터가 없습니다', true); btn.disabled=false; btn.textContent='📥 가져오기'; return; }
 
+  /* 되돌리기용 스냅샷: 업로드 직전 상태를 1단계 저장 (최근 1회만 유지) */
+  saveUndoSnapshot('업로드 이전 상태');
+
   if (importMode === 'replace') items = [];
 
-  let added = 0;
+  let added = 0, updated = 0;
   const newV = [];
 
   rows.forEach(row => {
@@ -2090,6 +2154,21 @@ async function importData(){
 
     if (!vendors.includes(vendor) && !newV.includes(vendor)) newV.push(vendor);
 
+    if (importMode === 'merge') {
+      /* 같은 업체+품목+단위+가격의 기존 행이 있으면: 같은 견적의 재업로드로 보고 날짜만 갱신 (덮어쓰기) */
+      const dup = items.find(it =>
+        it.vendor === vendor && it.name === name &&
+        (it.unit||'') === unit && it.price === price
+      );
+      if (dup) {
+        dup.date = date;
+        if (note) dup.note = note;
+        updated++;
+        return;
+      }
+    }
+
+    /* 가격이 다르거나 처음 보는 조합이면: 새로운 견적(가격 변동 이력)으로 추가 */
     items.push({id:uid(), vendor, name, unit, price, note, date});
     added++;
   });
@@ -2097,9 +2176,17 @@ async function importData(){
   newV.forEach(v => { if (!vendors.includes(v)) vendors.push(v); });
   await saveData(); renderAll();
   btn.disabled=false; btn.textContent='📥 가져오기';
-  showToast(`완료: ${added}개 추가${newV.length?' / 업체 "'+newV.join(', ')+'" 자동 등록':''}`);
+  const updNote = updated ? `, ${updated}개 동일견적 갱신` : '';
+  showToast(`완료: ${added}개 추가${updNote}${newV.length?' / 업체 "'+newV.join(', ')+'" 자동 등록':''}`);
   cancelUpload();
-  quoteSwitchTab('compare', document.querySelectorAll('.tab')[0]);
+  quoteSwitchTab('compare', null);
+  // 사이드바 서브메뉴 active 동기화
+  const quoteSubnav = document.querySelector('#group-quote .shell-subnav');
+  if(quoteSubnav){
+    quoteSubnav.querySelectorAll('.shell-sublink').forEach(b => b.classList.remove('active'));
+    const compareLink = quoteSubnav.querySelector('.shell-sublink');
+    if(compareLink) compareLink.classList.add('active');
+  }
 }
 
 function cancelUpload(){
@@ -2285,6 +2372,7 @@ window.startEditPrice = startEditPrice;
 window.startEditGroupName = startEditGroupName;
 window.startEditGroupUnit = startEditGroupUnit;
 window.startEditDate = startEditDate;
+window.undoLastImport = undoLastImport;
 })();
 </script>
 <script>
