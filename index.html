@@ -1517,6 +1517,12 @@ function fmtDate(dateStr){
   return dateStr;
 }
 
+/* 단위 문자열 맨 앞의 숫자(중량/수량)를 추출. 예: "10kg" -> 10, "2.5kg(박스포함)" -> 2.5, "박스" -> null */
+function extractUnitNumber(unit){
+  const m = String(unit||'').trim().match(/^(\d+(\.\d+)?)/);
+  return m ? parseFloat(m[1]) : null;
+}
+
 function setSyncState(s, l){
   document.getElementById('sync-dot').className = 'sync-dot ' + (s==='ok'?'ok':s==='busy'?'busy':'err');
   document.getElementById('sync-label').textContent = l;
@@ -1749,7 +1755,17 @@ function renderTable(){
         return av-bv;
       });
       return { unit, rows: sortedRows, minPrice, maxPrice, gap, gapPct };
-    }).sort((a,b) => a.unit.localeCompare(b.unit,'ko'));
+    }).sort((a,b) => {
+      const an = extractUnitNumber(a.unit);
+      const bn = extractUnitNumber(b.unit);
+      if (an != null && bn != null) {
+        if (an !== bn) return an - bn;
+        return a.unit.localeCompare(b.unit,'ko'); // 숫자가 같으면 단위 표기 전체로 비교 (예: 2kg vs 2박스)
+      }
+      if (an != null) return -1; // 숫자 있는 단위를 숫자 없는 단위보다 앞에
+      if (bn != null) return 1;
+      return a.unit.localeCompare(b.unit,'ko');
+    });
 
     // 카드 레벨 통계: 전체 업체 행 수, 단위 옵션 수, 단위별 최대 절감액 중 가장 큰 값(정렬용)
     const totalRows = rows.length;
