@@ -127,7 +127,7 @@ body {
 /* ══ 견적 대시보드 스타일 ══ */
 .quote-scope * {box-sizing:border-box;margin:0;padding:0}
 .quote-scope {font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f5;color:#111;min-height:100%}
-.quote-scope .wrap {max-width:1100px;margin:0 auto;padding:1.5rem 1rem}
+.quote-scope .wrap {max-width:none;margin:0 auto;padding:1.5rem 1rem}
 .quote-scope .header {display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;gap:12px;flex-wrap:wrap}
 .quote-scope .header h1 {font-size:20px;font-weight:600;color:#111;display:flex;align-items:center;gap:8px}
 .quote-scope .header h1 span {color:#3B6D11}
@@ -866,6 +866,18 @@ body {
         <button class="shell-sublink" onclick="shellSelect('guide','checker', this)">검사기</button>
       </div>
     </div>
+
+    <div class="shell-group" id="group-vendor">
+      <button class="shell-group-btn" onclick="shellToggleGroup('vendor')">
+        <span class="shell-group-icon">🤝</span>
+        <span class="shell-group-label">업체 현황</span>
+        <span class="shell-group-chevron">›</span>
+      </button>
+      <div class="shell-subnav">
+        <button class="shell-sublink" id="vendor-sub-vtable" onclick="shellSelect('vendor','vtable', this)">진행 현황</button>
+        <button class="shell-sublink" id="vendor-sub-vtimeline" onclick="shellSelect('vendor','vtimeline', this)">타임라인</button>
+      </div>
+    </div>
   </nav>
 
   <div class="shell-foot">
@@ -1467,8 +1479,319 @@ body {
 </footer>
 </div>
   </div>
+
+  <div class="shell-page" id="shell-page-vendor">
+<style>
+.vs-scope{font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f7f8fa;color:#1a1a1a;min-height:100vh;padding:0}
+.vs-scope *{box-sizing:border-box;margin:0;padding:0}
+.vs-wrap{max-width:none;padding:28px 24px}
+.vs-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.vs-header h1{font-size:21px;font-weight:700;color:#111;display:flex;align-items:center;gap:8px}
+.vs-header p{font-size:13px;color:#666;margin-top:3px}
+.vs-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px}
+.vs-stat{background:#fff;border-radius:12px;padding:14px 16px;border:1px solid #e8e8e8}
+.vs-stat-label{font-size:11px;color:#888;margin-bottom:4px;font-weight:500}
+.vs-stat-val{font-size:24px;font-weight:700;color:#111;line-height:1}
+.vs-stat-sub{font-size:11px;color:#aaa;margin-top:3px}
+.vs-stat.contract .vs-stat-val{color:#16a34a}
+.vs-stat.comm2 .vs-stat-val{color:#2563eb}
+.vs-stat.comm1 .vs-stat-val{color:#0891b2}
+.vs-stat.want .vs-stat-val{color:#d97706}
+.vs-toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.vs-search{position:relative;flex:1;min-width:200px}
+.vs-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#999;pointer-events:none}
+.vs-search input{width:100%;padding:0 12px 0 36px;height:38px;border-radius:9px;border:1px solid #ddd;background:#fff;font-size:13.5px;color:#111;outline:none;font-family:inherit}
+.vs-search input:focus{border-color:#4f46e5}
+.vs-filters{display:flex;gap:6px;flex-wrap:wrap}
+.vs-filter{padding:7px 14px;border-radius:8px;border:1px solid #ddd;font-size:12.5px;cursor:pointer;background:#fff;color:#666;transition:all .15s;font-family:inherit}
+.vs-filter:hover{background:#f0f0f0}
+.vs-filter.active{background:#4f46e5;color:#fff;border-color:#4f46e5;font-weight:600}
+.vs-subtabs{display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid #e8e8e8}
+.vs-subtab{padding:9px 18px;font-size:13.5px;font-weight:600;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;transition:color .15s}
+.vs-subtab:hover{color:#4f46e5}
+.vs-subtab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.vs-panel{display:none}
+.vs-panel.active{display:block}
+.vs-card{background:#fff;border-radius:12px;border:1px solid #e8e8e8;overflow:hidden}
+.vs-tbl-wrap{overflow-x:auto}
+.vs-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.vs-tbl th{padding:10px 12px;text-align:left;font-weight:600;font-size:11px;color:#888;border-bottom:1px solid #f0f0f0;background:#fafafa;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+.vs-tbl td{padding:9px 12px;border-bottom:1px solid #f5f5f5;color:#222;vertical-align:top}
+.vs-tbl tbody tr:last-child td{border-bottom:none}
+.vs-tbl tbody tr:hover td{background:#fafafe}
+.vs-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.vs-badge.contract{background:#dcfce7;color:#15803d}
+.vs-badge.launched{background:#ede9fe;color:#6d28d9}
+.vs-badge.comm2{background:#dbeafe;color:#1d4ed8}
+.vs-badge.comm1{background:#cffafe;color:#0e7490}
+.vs-badge.comm1bad{background:#f3f4f6;color:#6b7280}
+.vs-badge.want{background:#fef3c7;color:#b45309}
+.vs-badge.pending{background:#f9fafb;color:#9ca3af;border:1px solid #e5e7eb}
+.vs-link{color:#4f46e5;text-decoration:none;font-size:12px}
+.vs-link:hover{text-decoration:underline}
+.vs-memo-btn{background:none;border:none;cursor:pointer;color:#aaa;font-size:13px;padding:2px 6px;border-radius:5px;transition:background .12s}
+.vs-memo-btn:hover{background:#f0f0f0;color:#555}
+.vs-memo-popup{display:none;position:fixed;z-index:1000;background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.12);max-width:380px;font-size:13px;line-height:1.6;color:#333}
+.vs-memo-popup.open{display:block}
+.vs-memo-close{float:right;background:none;border:none;cursor:pointer;font-size:17px;color:#aaa;line-height:1;margin-left:8px}
+.vs-empty{text-align:center;padding:48px;color:#aaa;font-size:14px}
+.vs-tl-group{margin-bottom:28px}
+.vs-tl-date{font-size:13px;font-weight:700;color:#4f46e5;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.vs-tl-date::after{content:'';flex:1;height:1px;background:#e8e8e8}
+.vs-tl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.vs-tl-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px}
+.vs-tl-name{font-size:14px;font-weight:700;margin-bottom:4px}
+.vs-tl-items{font-size:12px;color:#666;margin-bottom:8px}
+.vs-tl-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.vs-tl-contact{font-size:12px;color:#888}
+/* 등록 모달 */
+.vs-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:16px}
+.vs-modal-overlay.open{display:flex}
+.vs-modal{background:#fff;border-radius:16px;padding:28px 28px 24px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,0.18)}
+.vs-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.vs-modal-title{font-size:17px;font-weight:700;color:#111}
+.vs-modal-close{background:none;border:none;cursor:pointer;font-size:22px;color:#bbb;line-height:1;padding:2px 6px;border-radius:6px;transition:background .12s}
+.vs-modal-close:hover{background:#f0f0f0;color:#666}
+.vs-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vs-form-group{display:flex;flex-direction:column;gap:5px}
+.vs-form-group.full{grid-column:1/-1}
+.vs-form-label{font-size:12px;font-weight:600;color:#555;letter-spacing:.01em}
+.vs-form-label span{color:#e5007e;margin-left:2px}
+.vs-form-input{padding:9px 12px;border-radius:8px;border:1px solid #e0e0e0;font-size:13.5px;color:#111;font-family:inherit;outline:none;transition:border .15s;background:#fff}
+.vs-form-input:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.08)}
+select.vs-form-input{cursor:pointer}
+textarea.vs-form-input{resize:vertical;min-height:82px;line-height:1.55}
+.vs-form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid #f0f0f0}
+.vs-btn{padding:9px 22px;border-radius:9px;border:none;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.vs-btn-primary{background:#4f46e5;color:#fff}
+.vs-btn-primary:hover{background:#4338ca}
+.vs-btn-ghost{background:#f3f4f6;color:#555;border:1px solid #e5e7eb}
+.vs-btn-ghost:hover{background:#eaecf0}
+.vs-btn-reg{background:#4f46e5;color:#fff;padding:9px 18px;border-radius:9px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:background .15s;white-space:nowrap;flex-shrink:0}
+.vs-btn-reg:hover{background:#4338ca}
+.vs-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#222;color:#fff;font-size:13px;padding:10px 20px;border-radius:10px;z-index:900;opacity:0;pointer-events:none;transition:opacity .25s}
+.vs-toast.show{opacity:1}
+/* 차트 */
+.vs-chart-row{display:grid;grid-template-columns:3fr 2fr;gap:16px;margin-bottom:24px}
+.vs-chart-card{background:#fff;border-radius:12px;border:1px solid #e8e8e8;padding:20px 20px 14px}
+.vs-chart-title{font-size:13px;font-weight:700;color:#444;margin-bottom:14px}
+.vs-chart-wrap{position:relative;height:200px}
+.vs-tl-divider{font-size:13px;font-weight:700;color:#888;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #e8e8e8}
+@media(max-width:700px){.vs-chart-row{grid-template-columns:1fr}.vs-form-grid{grid-template-columns:1fr}}
+/* 액션 버튼 */
+.vs-action-btn{background:none;border:none;cursor:pointer;font-size:14px;padding:3px 7px;border-radius:5px;opacity:0;transition:opacity .12s,background .12s;line-height:1}
+.vs-action-btn:hover{background:#f0f0f0}
+.vs-action-btn.del:hover{background:#fee2e2}
+.vs-tbl tbody tr:hover .vs-action-btn{opacity:1}
+.vs-action-btns{display:flex;gap:2px;align-items:center;justify-content:center}
+/* 캘린더 */
+.vs-cal{background:#fff;border-radius:12px;border:1px solid #e8e8e8;overflow:hidden}
+.vs-cal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #f0f0f0}
+.vs-cal-nav-title{font-size:15px;font-weight:700;color:#111}
+.vs-cal-nav-btn{background:none;border:1px solid #e5e7eb;border-radius:7px;width:32px;height:32px;cursor:pointer;color:#555;font-size:16px;display:inline-flex;align-items:center;justify-content:center;transition:background .12s}
+.vs-cal-nav-btn:hover{background:#f5f5f5}
+.vs-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);background:#fafafa;border-bottom:1px solid #f0f0f0}
+.vs-cal-weekday{padding:8px 0;text-align:center;font-size:11px;font-weight:700;color:#aaa}
+.vs-cal-weekday.sun{color:#ef4444}.vs-cal-weekday.sat{color:#3b82f6}
+.vs-cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+.vs-cal-day{min-height:80px;padding:7px 8px 6px;border-right:1px solid #f3f4f6;border-bottom:1px solid #f3f4f6;cursor:default;transition:background .1s;position:relative;overflow:hidden}
+.vs-cal-day:nth-child(7n){border-right:none}
+.vs-cal-day.other-month{background:#fafafa}
+.vs-cal-day.has-vendors{cursor:pointer}
+.vs-cal-day.has-vendors:hover{background:#f5f3ff}
+.vs-cal-day.selected{background:#ede9fe;border-color:#c4b5fd}
+.vs-cal-day.today .vs-cal-dn{background:#4f46e5;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.vs-cal-dn{font-size:12.5px;color:#444;font-weight:500;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.vs-cal-day.other-month .vs-cal-dn{color:#d1d5db}
+.vs-cal-day:nth-child(7n+1) .vs-cal-dn{color:#ef4444}
+.vs-cal-day.other-month:nth-child(7n+1) .vs-cal-dn{color:#fca5a5}
+.vs-cal-day:nth-child(7n) .vs-cal-dn{color:#3b82f6}
+.vs-cal-day.other-month:nth-child(7n) .vs-cal-dn{color:#93c5fd}
+.vs-cal-dots{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:2px}
+.vs-cal-dot{width:7px;height:7px;border-radius:50%}
+.vs-cal-count{font-size:10px;color:#6b7280;font-weight:600;line-height:1}
+.vs-cal-detail-wrap{background:#fff;border-radius:12px;border:1px solid #e8e8e8;margin-top:14px;overflow:hidden}
+.vs-cal-detail-header{padding:12px 18px;border-bottom:1px solid #f0f0f0;font-size:13.5px;font-weight:700;color:#4f46e5;display:flex;align-items:center;justify-content:space-between}
+.vs-cal-detail-close{background:none;border:none;cursor:pointer;font-size:18px;color:#bbb;padding:0 4px;line-height:1}
+.vs-cal-detail-list{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.vs-cal-detail-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#f9fafb;border:1px solid #f0f0f0}
+.vs-cal-detail-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.vs-cal-detail-info{flex:1;min-width:0}
+.vs-cal-detail-name{font-size:13.5px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs-cal-detail-sub{font-size:12px;color:#777;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vs-cal-detail-actions{display:flex;gap:4px;flex-shrink:0}
+.vs-cal-detail-btn{background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer;color:#555;transition:background .12s}
+.vs-cal-detail-btn:hover{background:#f0f0f0}
+/* 진행 현황 인라인 드롭다운 */
+.vs-prog-sel{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;border:none;cursor:pointer;outline:none;font-family:inherit;appearance:none;-webkit-appearance:none;transition:background .12s}
+.vs-prog-sel[data-s="contract"]{background:#dcfce7;color:#15803d}
+.vs-prog-sel[data-s="launched"]{background:#ede9fe;color:#6d28d9}
+.vs-prog-sel[data-s="comm2"]{background:#dbeafe;color:#1d4ed8}
+.vs-prog-sel[data-s="comm1"]{background:#cffafe;color:#0e7490}
+.vs-prog-sel[data-s="comm1bad"]{background:#f3f4f6;color:#6b7280}
+.vs-prog-sel[data-s="want"]{background:#fef3c7;color:#b45309}
+.vs-prog-sel[data-s="pending"]{background:#f9fafb;color:#9ca3af;border:1px solid #e5e7eb}
+.vs-prog-sel option{background:#fff;color:#111;font-weight:normal}
+/* 견적서 등록 버튼 */
+.vs-quote-btn{background:#3b6d11;color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .12s;white-space:nowrap}
+.vs-quote-btn:hover{background:#2d5a0d}
+</style>
+
+<div class="vs-scope">
+<div class="vs-wrap">
+
+<div class="vs-header">
+  <div>
+    <h1>🤝 업체 계약 현황</h1>
+    <p>파트너사 소통 진행상황 및 계약 추적 대시보드</p>
+  </div>
+  <div>
+    <span id="vs-last-updated" style="font-size:12px;color:#aaa"></span>
+  </div>
+</div>
+
+<div class="vs-stats" id="vs-stats"></div>
+
+<div class="vs-subtabs">
+  <button class="vs-subtab active" id="vs-tab-vtable" onclick="vsSwitchTab('vtable')">📋 진행 현황</button>
+  <button class="vs-subtab" id="vs-tab-vtimeline" onclick="vsSwitchTab('vtimeline')">📅 타임라인</button>
+</div>
+
+<!-- 진행 현황 탭 -->
+<div class="vs-panel active" id="vs-panel-vtable">
+  <div class="vs-toolbar">
+    <div class="vs-search">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="vs-search" placeholder="업체명, 품목, 담당자 검색..." oninput="vsRender()" autocomplete="off"/>
+    </div>
+    <button class="vs-btn-reg" onclick="vsOpenRegister()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      업체 등록
+    </button>
+  </div>
+  <div class="vs-filters" id="vs-filters" style="margin-bottom:14px"></div>
+  <div class="vs-card">
+    <div class="vs-tbl-wrap">
+      <table class="vs-tbl">
+        <thead>
+          <tr>
+            <th style="width:90px">날짜</th>
+            <th style="min-width:130px">업체명</th>
+            <th style="min-width:140px">주요 품목</th>
+            <th style="width:90px">담당자</th>
+            <th style="width:120px">연락처</th>
+            <th style="width:170px">이메일</th>
+            <th style="width:60px">링크</th>
+            <th style="width:130px">진행 현황</th>
+            <th style="width:70px;text-align:center">견적서</th>
+            <th style="width:90px;text-align:center">액션</th>
+          </tr>
+        </thead>
+        <tbody id="vs-tbody"></tbody>
+      </table>
+    </div>
+    <div class="vs-empty" id="vs-empty" style="display:none">검색 결과가 없습니다.</div>
+  </div>
+  <div style="font-size:12px;color:#aaa;margin-top:10px;text-align:right" id="vs-count"></div>
+</div>
+
+<!-- 타임라인 탭 -->
+<div class="vs-panel" id="vs-panel-vtimeline">
+  <div class="vs-chart-row">
+    <div class="vs-chart-card">
+      <div class="vs-chart-title">📊 월별 업체 컨택 현황</div>
+      <div class="vs-chart-wrap"><canvas id="vs-chart-monthly"></canvas></div>
+    </div>
+    <div class="vs-chart-card">
+      <div class="vs-chart-title">🥧 진행 현황 비율</div>
+      <div class="vs-chart-wrap"><canvas id="vs-chart-status"></canvas></div>
+    </div>
+  </div>
+  <div class="vs-tl-divider">📅 캘린더</div>
+  <div id="vs-cal-container"></div>
+  <div id="vs-cal-detail"></div>
+</div>
+
 </div>
 </div>
+
+<div class="vs-memo-popup" id="vs-memo-popup">
+  <button class="vs-memo-close" onclick="vsCloseMemo()">×</button>
+  <strong id="vs-memo-name" style="display:block;margin-bottom:8px;font-size:14px"></strong>
+  <div id="vs-memo-text"></div>
+</div>
+
+<!-- 업체 등록 모달 -->
+<div class="vs-modal-overlay" id="vs-reg-overlay" onclick="vsRegOverlayClick(event)">
+  <div class="vs-modal">
+    <div class="vs-modal-header">
+      <span class="vs-modal-title" id="vs-modal-title">🤝 업체 등록</span>
+      <button class="vs-modal-close" onclick="vsCloseRegister()">×</button>
+    </div>
+    <div class="vs-form-grid">
+      <div class="vs-form-group">
+        <label class="vs-form-label">업체명<span>*</span></label>
+        <input class="vs-form-input" id="vrf-name" placeholder="(주)홍길동식품"/>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">등록일<span>*</span></label>
+        <input class="vs-form-input" id="vrf-date" type="date"/>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">주요 판매 품목</label>
+        <input class="vs-form-input" id="vrf-items" placeholder="감자, 고구마 등"/>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">판매 링크</label>
+        <input class="vs-form-input" id="vrf-link" placeholder="https://..."/>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">담당자명</label>
+        <input class="vs-form-input" id="vrf-contact" placeholder="홍길동"/>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">연락처</label>
+        <input class="vs-form-input" id="vrf-phone" placeholder="010-0000-0000"/>
+      </div>
+      <div class="vs-form-group full">
+        <label class="vs-form-label">이메일</label>
+        <input class="vs-form-input" id="vrf-email" placeholder="example@naver.com"/>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">진행 현황</label>
+        <select class="vs-form-input" id="vrf-progress">
+          <option value="">미소통</option>
+          <option value="1차 소통 희망">1차 소통 희망</option>
+          <option value="1차 소통 완료">1차 소통 완료</option>
+          <option value="1차 소통 완료(조건맞지않음)">조건불일치</option>
+          <option value="2차 소통 중">2차 소통 중</option>
+          <option value="런칭 완료">런칭 완료</option>
+          <option value="계약 진행중">계약 진행중</option>
+        </select>
+      </div>
+      <div class="vs-form-group">
+        <label class="vs-form-label">계약 상태</label>
+        <select class="vs-form-input" id="vrf-contract">
+          <option value="">-</option>
+          <option value="계약 진행중">계약 진행중</option>
+        </select>
+      </div>
+      <div class="vs-form-group full">
+        <label class="vs-form-label">메모 / 진행상황</label>
+        <textarea class="vs-form-input" id="vrf-memo" placeholder="소통 내용, 특이사항, 견적 조건 등..."></textarea>
+      </div>
+    </div>
+    <div class="vs-form-actions">
+      <button class="vs-btn vs-btn-ghost" onclick="vsCloseRegister()">취소</button>
+      <button class="vs-btn vs-btn-primary" id="vs-modal-submit-btn" onclick="vsSubmitRegister()">등록하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="vs-toast" id="vs-toast"></div>
+
+  </div>
 
 <script>
 (function(){
@@ -1917,7 +2240,7 @@ function renderManageList(){
   if (!fi.length){ el.innerHTML='<div class="empty">등록된 항목 없음</div>'; return; }
   el.innerHTML = fi.map(it => {
     const vIdx = vendors.indexOf(it.vendor);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:13px;flex-wrap:wrap;gap:6px">
+    return `<div id="edit-row-${it.id}"><div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f5f5f5;font-size:13px;flex-wrap:wrap;gap:6px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="vbadge ${VBC[vIdx>=0?vIdx%VBC.length:0]}">${it.vendor}</span>
         <span style="font-weight:600">${it.name}</span>
@@ -1926,9 +2249,60 @@ function renderManageList(){
         <span style="color:#bbb;font-size:11px">${fmtDate(it.date)}</span>
         ${it.note ? `<span style="font-size:12px;color:#999">${it.note}</span>` : ''}
       </div>
-      <button class="btn-s" onclick="deleteItem('${it.id}')" style="color:#ef4444;border-color:#fecaca">🗑 삭제</button>
-    </div>`;
+      <div style="display:flex;gap:6px">
+        <button class="btn-s" onclick="editItem('${it.id}')">✏️ 수정</button>
+        <button class="btn-s" onclick="deleteItem('${it.id}')" style="color:#ef4444;border-color:#fecaca">🗑 삭제</button>
+      </div>
+    </div></div>`;
   }).join('');
+}
+
+function editItem(id){
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  const m = (it.unit||'').match(/^(\d+(?:\.\d+)?)(.+)$/);
+  const uqty = m ? m[1] : '';
+  const utype = m ? m[2] : (it.unit||'kg');
+  const vopts = vendors.map(v=>`<option value="${v}"${v===it.vendor?' selected':''}>${v}</option>`).join('');
+  const UTYPES = ['kg','박스','개','포기','단','망'];
+  const uopts = UTYPES.map(u=>`<option${u===utype?' selected':''}>${u}</option>`).join('');
+  const row = document.getElementById('edit-row-'+id);
+  if (!row) return;
+  row.innerHTML = `
+    <div style="background:#f0f7e8;border-radius:8px;padding:10px 12px;margin:4px 0;border:1px solid #c8e6a0">
+      <div class="form-row">
+        <div class="fg"><label>업체명</label><select id="ei-v-${id}">${vopts}</select></div>
+        <div class="fg"><label>품목명</label><input id="ei-n-${id}" value="${it.name.replace(/"/g,'&quot;')}"/></div>
+        <div class="fg"><label>단위</label><div class="unit-combo">
+          <input id="ei-uq-${id}" type="number" min="0" step="any" value="${uqty}" class="unit-qty-input"/>
+          <select id="ei-ut-${id}">${uopts}</select>
+        </div></div>
+        <div class="fg"><label>공급가</label><input id="ei-p-${id}" type="number" min="0" value="${it.price??''}"/></div>
+        <div class="fg"><label>비고</label><input id="ei-note-${id}" value="${(it.note||'').replace(/"/g,'&quot;')}"/></div>
+        <div class="fg"><label>&nbsp;</label><div style="display:flex;gap:6px">
+          <button class="btn-p" onclick="saveEdit('${id}')">✅ 저장</button>
+          <button class="btn-s" onclick="renderManageList()">취소</button>
+        </div></div>
+      </div>
+    </div>`;
+}
+
+async function saveEdit(id){
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  const name = document.getElementById('ei-n-'+id)?.value.trim();
+  if (!name){ showToast('품목명을 입력해주세요', true); return; }
+  it.vendor = document.getElementById('ei-v-'+id)?.value || it.vendor;
+  it.name = name;
+  const qr = document.getElementById('ei-uq-'+id)?.value.trim();
+  const ut = document.getElementById('ei-ut-'+id)?.value || 'kg';
+  it.unit = qr ? `${qr}${ut}` : ut;
+  const pv = document.getElementById('ei-p-'+id)?.value;
+  it.price = (pv===''||pv==null) ? null : parseInt(pv);
+  it.note = document.getElementById('ei-note-'+id)?.value.trim()||'';
+  await saveData();
+  renderAll();
+  showToast('수정 완료');
 }
 
 function renderVendorSettings(){
@@ -2382,6 +2756,9 @@ window.addVendor = addVendor;
 window.importData = importData;
 window.addItem = addItem;
 window.deleteItem = deleteItem;
+window.editItem = editItem;
+window.saveEdit = saveEdit;
+window.renderManageList = renderManageList;
 window.removeVendor = removeVendor;
 window.startEdit = startEdit;
 window.startEditPrice = startEditPrice;
@@ -2389,6 +2766,13 @@ window.startEditGroupName = startEditGroupName;
 window.startEditGroupUnit = startEditGroupUnit;
 window.startEditDate = startEditDate;
 window.undoLastImport = undoLastImport;
+window.quoteAddVendorAndSwitch = async function(vendorName) {
+  if (!vendors.includes(vendorName)) {
+    vendors.push(vendorName);
+    await saveData();
+    renderAll();
+  }
+};
 })();
 </script>
 <script>
@@ -3084,11 +3468,11 @@ window.guideToggleCheck = guideToggleCheck;
 </script>
 <script>
 (function(){
-  var GROUP_PAGE_ID = { quote:'shell-page-quote', season:'shell-page-season', guide:'shell-page-guide' };
+  var GROUP_PAGE_ID = { quote:'shell-page-quote', season:'shell-page-season', guide:'shell-page-guide', vendor:'shell-page-vendor' };
 
   // ── 그룹(대탭) 펼침/접힘 + 메인 페이지 전환 ──
   window.shellToggleGroup = function(group){
-    var allGroups = ['quote','season','guide'];
+    var allGroups = ['quote','season','guide','vendor'];
     allGroups.forEach(function(g){
       var el = document.getElementById('group-'+g);
       var btn = el.querySelector('.shell-group-btn');
@@ -3139,6 +3523,8 @@ window.guideToggleCheck = guideToggleCheck;
       document.querySelectorAll('#shell-page-guide .subtab-panel').forEach(function(p){
         p.style.display = (p.getAttribute('data-subtab-panel') === sub) ? '' : 'none';
       });
+    } else if(group === 'vendor') {
+      vsSwitchTab(sub);
     }
   };
 
@@ -3171,5 +3557,654 @@ window.guideToggleCheck = guideToggleCheck;
 })();
 
 </script>
+<script>
+(function(){
+// ── 업체 현황 대시보드 ──
+var VS_DATA = [
+  {date:'2026-06-17',name:'꽃과일무화과',items:'품목 확인 필요(농수산물)',link:'',contact:'심지영',phone:'010-6212-7311',email:'coolskyme@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-17',name:'육남매밥상',items:'품목 확인 필요(농수산물)',link:'',contact:'김태희',phone:'010-9553-7657',email:'pu7657@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-17',name:'마누아가든',items:'감자',link:'https://smartstore.naver.com/manoir',contact:'홍세라',phone:'010-5282-9007',email:'mouserabbit@naver.com',progress:'1차 소통 완료',memo:'',contract:''},
+  {date:'2026-06-17',name:'장스스파이스클럽',items:'소스',link:'https://spiceclub.co.kr/product/list.html?cate_no=46',contact:'박종범',phone:'010-9292-9575',email:'jbpark@solstice-life.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-17',name:'아빠맘',items:'품목 확인 필요(가공식품)',link:'',contact:'최신훈',phone:'010-7755-9733',email:'sinhunchoi@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-17',name:'농업회사법인왕가네농산물(주)',items:'품목 확인 필요(농수산물)',link:'',contact:'한경숙',phone:'010-3892-6289',email:'kyoungsuk25@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-17',name:'장날엔',items:'품목 확인 필요(농수산물,가공식품)',link:'',contact:'이나리',phone:'010-5664-2425',email:'q2110@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-16',name:'다나 와 농장',items:'품목 확인 필요(농수산물)',link:'',contact:'정윤이',phone:'010-8417-3696',email:'solisealov@naver.com',progress:'',memo:'6/18 소통: 부재중',contract:''},
+  {date:'2026-06-14',name:'슈가리프',items:'귤, 고구마, 과메기, 오징어초무침',link:'https://smartstore.naver.com/sweetgo',contact:'김세현',phone:'010-4063-9939',email:'whitechat0@naver.com',progress:'1차 소통 완료',memo:'밀키트 판매 원하심. 달콤푸릇 오프라인 매장 운영중(과일경매장 수급). 과메기만 위수탁 진행. 흑돼지 불고기 300g 2000원(위수탁 가능). 신비복숭아·멜론 산지 거래 소통 중, 추후 공급가 공유 예정.',contract:''},
+  {date:'2026-06-14',name:'더마늘',items:'품목 확인 필요(마늘)',link:'',contact:'정준호',phone:'010-5656-7908',email:'junseo1983@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-14',name:'하림이네농장',items:'감귤',link:'https://www.farmer4989.com/jeju_mall/291',contact:'현여진',phone:'010-8662-3065',email:'jeju_mall@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-14',name:'바른흙소리',items:'감자',link:'https://smartstore.naver.com/bareunsoil',contact:'김지휸',phone:'010-3511-5423',email:'aksj548@naver.com',progress:'1차 소통 완료',memo:'6/18 소통: 두백감자 1종류 판매중(~10월). 월 1회 정산 OK. 로젠택배 사용. 스마트스토어만 진행(쿠팡x). 중/대/특/왕 5/10/20kg 판매(직접 재배). 공급가 요청(익일 오전 중).',contract:''},
+  {date:'2026-06-14',name:'누니마카롱',items:'마카롱',link:'https://smartstore.naver.com/nunius',contact:'김종광',phone:'010-8914-6922',email:'zozo1033@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-14',name:'온린',items:'품목 확인 필요(농수산물)',link:'',contact:'정영옥',phone:'010-5188-7720',email:'nhss0553@gmail.com',progress:'1차 소통 완료',memo:'밀키트·즉석조리·건어물·농산물(채소/과일). 가락시장 도매. 성남 소재. 고기(농협납품, 퀄리티 보장). LA갈비 선물세트 가능. 복숭아·자두·체리·블루베리·고구마·감자·햇콩 판매중. 로젠택배(3,000원), 당일 출고 가능, 반월 마감 원함. 견적서 차주 월화 중 공유 예정.',contract:''},
+  {date:'2026-06-13',name:'도담푸드',items:'품목 확인 필요(가공식품)',link:'',contact:'김동주',phone:'010-4353-3083',email:'chdrud123@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-13',name:'곡물제작소',items:'미숫가루, 고춧가루',link:'https://smartstore.naver.com/grainmill',contact:'',phone:'',email:'',progress:'',memo:'',contract:''},
+  {date:'2026-06-12',name:'(주)트루데일리/머금햇살',items:'고춧가루',link:'',contact:'박재룡',phone:'010-5321-3089',email:'truedaily81@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-12',name:'손탁커피',items:'드립백, 원액',link:'https://www.sontagcoffee.com/',contact:'김도담',phone:'010-6416-7324',email:'dodam210@gmail.com',progress:'',memo:'카카오톡 선물하기/컬리 검토',contract:''},
+  {date:'2026-06-12',name:'델리텐더',items:'닭가슴살 육포',link:'https://delitender.com/',contact:'박수식',phone:'010-2652-6251',email:'sspark@saeloumplus.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-11',name:'칩스서울',items:'동결건조 과일칩',link:'https://www.chipsseoul.com/',contact:'엄태경',phone:'010-4350-0051',email:'taekyung.eom@chipsseoul.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-11',name:'우집',items:'품목확인필요',link:'',contact:'박병환',phone:'010-8932-7941',email:'lamer44@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-11',name:'논산딸기한우',items:'논산 딸기사료 한우',link:'오프라인',contact:'남상욱',phone:'010-5028-4901',email:'nsw1921@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-09',name:'상미곳간',items:'그래놀라',link:'https://smartstore.naver.com/sangmipentry',contact:'함성욱',phone:'010-5471-7557',email:'lee.sangmi@sangmipantry.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-09',name:'바다in연',items:'전복',link:'https://www.coupang.com/vp/products/9548901635',contact:'장명호',phone:'010-6684-0464',email:'aodrndmqek@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-09',name:'(주)미손푸드',items:'과일찰바, 모찌',link:'https://www.instagram.com/misonfood/',contact:'송상언',phone:'010-9717-0907',email:'7oiioiio7@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-09',name:'주식회사 제니핏',items:'블랙베리 츄어블 건강식품',link:'https://genifit.kr/',contact:'이준영',phone:'010-2452-8861',email:'genifit.master@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-08',name:'KOOK(쿸크)',items:'저염 맛간장',link:'https://smartstore.naver.com/joyboy-shop',contact:'김다미',phone:'010-6292-0444',email:'mukkum_ntech@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-08',name:'서울토닉',items:'에너지/회복 드링크, 숙취해소제',link:'https://seoultonic.com/',contact:'박인주',phone:'010-2528-0809',email:'park7371@hanmail.net',progress:'',memo:'',contract:''},
+  {date:'2026-06-07',name:'올바른푸드랩',items:'냉동손질한치, 동결건조 딸기',link:'https://smartstore.naver.com/allds',contact:'추범석',phone:'010-3175-7774',email:'gamsungvip@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-07',name:'라우벤',items:'초코쿠키',link:'https://lauben-kr.com/',contact:'배은별',phone:'010-4286-8078',email:'lauben.kr@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-07',name:'농업회사법인자연애에프앤비(주)',items:'차 선물세트',link:'https://smartstore.naver.com/wt2',contact:'김현정',phone:'010-8847-6820',email:'wellnesstea@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-06',name:'골든오스트레일리아',items:'마카다미아',link:'https://goldenaustralia.mycafe24.com/',contact:'조준행',phone:'010-8939-2849',email:'man2849@hotmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-06',name:'농업회사법인 디엠제트드림푸드(주)',items:'콩류, 초콜릿',link:'https://smartstore.naver.com/paju',contact:'한정은',phone:'010-9863-1105',email:'peacebeans1@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-06',name:'농업회사법인(주) 담백원',items:'장류, 발효원액',link:'https://dambackwon.com/shop/',contact:'박정희',phone:'010-7266-7592',email:'damback@daum.net',progress:'',memo:'',contract:''},
+  {date:'2026-06-05',name:'아이뽀란 i4ran',items:'프리 유정란',link:'인스타그램 @eyeran_egg',contact:'김준하',phone:'010-6260-9933',email:'junada04@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-04',name:'주식회사 미르에프앤비랩',items:'가공식품',link:'오프라인',contact:'권용욱',phone:'010-3245-1000',email:'simonkwon84@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-04',name:'미소당 광수발효떡',items:'발효떡/기지떡/찹쌀떡',link:'https://smartstore.naver.com/misodang',contact:'장화정',phone:'010-5897-3066',email:'gaecho@hanmail.net',progress:'',memo:'',contract:''},
+  {date:'2026-06-03',name:'예서인푸드',items:'품목 확인 필요',link:'승인 심사중',contact:'이다희',phone:'010-8394-4860',email:'ekgml961031@naver.com',progress:'1차 소통 희망',memo:'6/9: 런칭한지 얼마되지 않아 판매 품목 없음. 6/10 다시 연락 예정. 6/10: 부재중.',contract:''},
+  {date:'2026-06-03',name:'닥터브레드',items:'고단백/쌀 베이글',link:'https://smartstore.naver.com/drdrdrdrdr',contact:'임사랑',phone:'010-8324-7975',email:'lovesoop25@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-03',name:'우리네농수산',items:'참외, 맥반석 구운계란',link:'https://store.kakao.com/freshuline',contact:'박주희',phone:'010-9837-2205',email:'pwngml22@naver.com',progress:'1차 소통 희망',memo:'6/10: 네이버 톡톡으로만 문의 가능(톡톡 채널 찾을 수 없음).',contract:''},
+  {date:'2026-06-02',name:'글로벌클램',items:'수산물',link:'https://naver.me/GEWNu1Zc',contact:'한승우',phone:'010-9843-3335',email:'bestclam@daum.net',progress:'',memo:'',contract:''},
+  {date:'2026-06-02',name:'파머드림',items:'귀리, 미숫가루',link:'https://ader.naver.com/',contact:'이성일',phone:'010-9092-4993',email:'haneoa20@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-02',name:'가보팜스/비담',items:'꿀, 배즙',link:'https://www.gavo.co.kr/',contact:'김수영',phone:'010-9763-1161',email:'kimgun1161@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-01',name:'대본',items:'프리미엄 웰니스 차',link:'www.daeguyg.com',contact:'김익중',phone:'010-5180-4490',email:'kij4490@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-01',name:'정성을담다',items:'홍삼스틱, 배도라지청 스틱',link:'jsdamda.com',contact:'이상헌',phone:'010-4736-0969',email:'jeongseongdamda@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-06-01',name:'대한물산',items:'농수산물',link:'오프라인',contact:'황태동 전무',phone:'010-8604-7501',email:'respace@kakao.com',progress:'1차 소통 완료',memo:'6/9: 미역·다시마·김 메인. 쿠팡 연간 10억. 벤더사 납품 진행 중(쿠팡 제외 조건). 온라인 쿠팡·스마트스토어만 운영. 로젠/롯데택배 평균 3,000원. 전상품 공급가 전달 예정.',contract:''},
+  {date:'2026-06-01',name:'비그레인',items:'고단백, 저당 베이커리',link:'www.a-life.co.kr',contact:'강상진',phone:'010-8881-1678',email:'sangjin321@a-life.co.kr',progress:'',memo:'',contract:''},
+  {date:'2026-05-31',name:'마누아가든(홍기정)',items:'비닐하우스 농수산물',link:'스마트스토어',contact:'홍기정',phone:'010-6447-9007',email:'mouserabbit@naver.com',progress:'1차 소통 완료',memo:'CJ대한통운 건당 2,000원. 일평균 3,000건 출고. 과일: 참외·미니황도·신비복숭아. 농산물: 초당옥수수·미백찰·흑찰·매실·살구 등. 6/10~ 제주단호박 출고 예정. 자사몰 구축 초기(내년 본격 운영). 성주/대구/제주도 작업장 보유. 견적 수취 대기중.',contract:''},
+  {date:'2026-05-31',name:'과일해다',items:'품목 확인 필요(자사몰 구축중)',link:'아직없음',contact:'박응순',phone:'010-2330-7703',email:'az1545@naver.com',progress:'1차 소통 완료',memo:'자사몰 구축중.',contract:''},
+  {date:'2026-05-31',name:'달디단토마토',items:'대추 방울 토마토',link:'친화경 유기농대추방울토마토',contact:'권석운',phone:'010-4177-4462',email:'e026001@naver.com',progress:'1차 소통 희망',memo:'특이사항 없음',contract:''},
+  {date:'2026-05-30',name:'서브마켓',items:'과일',link:'서브마켓',contact:'송석태',phone:'010-7365-2280',email:'hbo8060@naver.com',progress:'1차 소통 희망',memo:'큰 업체라 주문량 확인 필요(견적 높을 수 있음). 6/9: 전화 어려워 6/10 오전 재전화. 6/10: 전화 받지 않음.',contract:''},
+  {date:'2026-05-30',name:'삼남매 사과대추',items:'사과 대추',link:'딸부잣집과일 당근마켓',contact:'박인식',phone:'010-8827-9726',email:'loveunjung1@naver.com',progress:'1차 소통 희망',memo:'특이사항 없음',contract:''},
+  {date:'2026-05-29',name:'빗솔정과',items:'도라지 정과',link:'https://naver.me/G7VqRa8W',contact:'하덕기',phone:'010-8718-0859',email:'bitsol0860@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-28',name:'사과정원',items:'사과 파이, 사과 쿠키, 사과 스콘',link:'네이버스마트스토어/사과정원',contact:'김선아',phone:'010-8871-2332',email:'apple-garden@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-27',name:'대장부농수산',items:'블루베리, 사과, 토마토, 참외, 수박, 감귤, 배',link:'https://heremarket.flexg.shop/',contact:'김태현',phone:'010-9977-7200',email:'ceo@relax-pacific.com',progress:'1차 소통 완료',memo:'확인중',contract:''},
+  {date:'2026-05-27',name:'(주)닥터블룸/하루미감',items:'애사비, 이너뷰티',link:'www.drbloom.co.kr',contact:'양모연',phone:'010-6385-1229',email:'drbloom@drbloom.co.kr',progress:'',memo:'',contract:''},
+  {date:'2026-05-27',name:'주식회사이르에프앤비랩',items:'베이커리 OEM',link:'상품소개서',contact:'권용욱',phone:'010-6245-1000',email:'simonkwon84@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-26',name:'올댓프루츠',items:'농수산물',link:'오프라인',contact:'조희열',phone:'010-8689-0401',email:'fruitsatf@naver.com',progress:'1차 소통 완료',memo:'6/9: 강서농산물도매시장에서 떼옴. 오프라인 과일 가게 운영. 로젠택배 있음. 현재 판매 중인 과일 종류로 공급가 금주 중 전달 예정.',contract:''},
+  {date:'2026-05-26',name:'토리팜',items:'품목 확인 필요(도매상/축산)',link:'상품소개서 링크 미확인',contact:'정민승',phone:'010-5758-0367',email:'ho1987@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-26',name:'이가축산',items:'한돈삼겹살',link:'https://m.smartstore.naver.com/iganegogi',contact:'이재민',phone:'010-6716-4959',email:'woals1158@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-25',name:'주식회사 미르에프앤비랩(밀키트)',items:'밀키트',link:'상품소개서',contact:'권용욱',phone:'010-6245-1000',email:'simonkwon84@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-24',name:'팜디',items:'참송이버섯',link:'참송버섯',contact:'오호석',phone:'010-5681-1625',email:'hoseok5@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-24',name:'장담은',items:'간장 양념 새우장',link:'https://naver.me/xR2nYRh3',contact:'오서준',phone:'010-6863-6602',email:'rightnow530@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-23',name:'자연바구니',items:'난각번호 1번 계란',link:'https://link.coupang.com/a/dYLpCAURAy',contact:'오형태',phone:'010-9919-0819',email:'pse3530@naver.com',progress:'런칭 완료',memo:'난각번호 2번란 취급',contract:'계약 진행중'},
+  {date:'2026-05-22',name:'거누',items:'농수산물',link:'없음',contact:'이건우',phone:'010-9866-7987',email:'sky_wored@naver.com',progress:'1차 소통 완료(조건맞지않음)',memo:'6/9: B2B납품만 진행. 주단위 결제 원함. 하루 수박 1,000통·참외 2,000박스 이상 출고, 소량은 진행 불가.',contract:''},
+  {date:'2026-05-22',name:'달콤하다',items:'옥수수',link:'옥수수',contact:'박응순',phone:'010-8858-1414',email:'az1545@naver.com',progress:'1차 소통 희망',memo:'6/9 부재중(문자 남겨놓음)',contract:''},
+  {date:'2026-05-21',name:'리틀팬트리',items:'호두정과, 그래놀라',link:'https://www.littlepantry.co.kr/',contact:'이성로',phone:'010-2297-2875',email:'meds@nate.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-21',name:'프레시파머',items:'동물복지유정란',link:'프레시파머',contact:'김정진 본부장',phone:'010-7724-7001',email:'cndff@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-21',name:'청담은',items:'수제청',link:'https://naver.me/5f5jGHan',contact:'조수현',phone:'010-8365-0836',email:'xian10@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-21',name:'이가축산(2)',items:'한돈삼겹살',link:'https://naver.me/xB7MDroL',contact:'이재민',phone:'010-6716-4959',email:'woals1158@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-21',name:'구씨네청과',items:'감자, 사과, 참외, 망고',link:'https://smartstore.naver.com/koofruits',contact:'임태형',phone:'010-2920-3632',email:'limth0306@naver.com',progress:'2차 소통 중',memo:'견적 협의 중(흑수박)',contract:''},
+  {date:'2026-05-21',name:'더원',items:'꽃게장, 돌게장',link:'THEONESUSAN.COM',contact:'김찬호',phone:'010-2688-6812',email:'zlacksgh1@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-21',name:'미르에프앤비랩(베이커리)',items:'베이커리 OEM',link:'상품소개서',contact:'권용욱',phone:'010-6245-1000',email:'simonkwon84@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-20',name:'휘게팜',items:'산양유',link:'https://naver.me/56aKxQLZ',contact:'송이준',phone:'010-3954-7650',email:'yhh1421@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-20',name:'농업회사법인(주)단물/단물가게',items:'건강주스, 호박즙, 알밤라떼',link:'www.단물가게.com',contact:'양동민',phone:'010-4490-2612',email:'yodm12@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-20',name:'감토정',items:'된장, 고추장',link:'www.gamtojung.com',contact:'류경희',phone:'010-5166-8869',email:'gamtojung1@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-19',name:'디앤더블유',items:'고추',link:'',contact:'권종달',phone:'010-9479-9449',email:'kjd4994@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-19',name:'한성인삼',items:'인삼',link:'https://hsgin.co.kr/',contact:'한성희',phone:'010-5435-9498',email:'hurrj@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-18',name:'영뀨농장',items:'방울토마토',link:'https://link.coupang.com/a/dQIcbUfi9c',contact:'정영규',phone:'010-2870-4404',email:'jyg3516@naver.com',progress:'1차 소통 희망',memo:'특이사항 없음',contract:''},
+  {date:'2026-05-17',name:'반석대군농장',items:'건목이버섯',link:'https://naver.me/G0pDnaJH',contact:'양승규',phone:'010-6323-9320',email:'ypeter1@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-16',name:'에코팜코리아',items:'투쁠한우세트',link:'https://naver.me/GT62bhSw',contact:'이승현',phone:'010-2720-4884',email:'ecofarmkorea@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-16',name:'헤이피피',items:'제주도 원물',link:'',contact:'김민수',phone:'010-3025-4241',email:'Pui5756@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-16',name:'바른장인',items:'간장게장, 순살게장',link:'www.바른장인.com',contact:'박지성',phone:'010-6633-9869',email:'2021honestfood@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-15',name:'몬업',items:'도라지배즙',link:'https://m.smartstore.naver.com/monup',contact:'김성민',phone:'010-6327-0800',email:'mon-up@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-15',name:'브랜뉴데이',items:'오트밀',link:'브랜뉴데이오트밀',contact:'송태명',phone:'010-2976-2920',email:'brandnewday.cop@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-14',name:'바로땃슈',items:'대추방울토마토',link:'https://www.justpicked.co.kr',contact:'김형석',phone:'010-9165-5002',email:'ceo@justpicked.co.kr',progress:'1차 소통 희망',memo:'특이사항 없음',contract:''},
+  {date:'2026-05-14',name:'바른장인(2)',items:'간장게장, 순살게장',link:'www.바른장인.net',contact:'박지성',phone:'010-6633-9869',email:'nayopjs@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-14',name:'엔',items:'제주돼지고추장불고기, 꿀양념목살',link:'https://m.smartstore.naver.com/enterfood',contact:'김광현',phone:'010-5201-3912',email:'arcoart@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-14',name:'에코에프에스',items:'곰곰 한돈 삼겹살 수육용(냉장)',link:'ecofs.co.kr',contact:'김홍식',phone:'010-3013-9670',email:'hongshya@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-14',name:'용왕당수산',items:'블랙타이거새우장, 게장, 광어회, 문어',link:'https://m.smartstore.naver.com/yongwangdang',contact:'한정엽',phone:'010-5674-5214',email:'gkswjdduq94@nate.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-13',name:'기조자두농장(오이)',items:'흑침 백다다기 오이',link:'',contact:'박금기',phone:'010-7600-0650',email:'pgg0540@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-13',name:'프리셀',items:'네토그린',link:'presell.com',contact:'손소희',phone:'010-4105-8734',email:'shson@netogreenkr.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-13',name:'유기농 전문베이커리 닥터올가문',items:'유기농 베이커리',link:'orgamoon.com',contact:'문지윤',phone:'010-8554-1225',email:'moonek25@hanmail.net',progress:'',memo:'',contract:''},
+  {date:'2026-05-13',name:'바른장인(3)',items:'간장게장, 순살게장',link:'www.바른장인.net',contact:'박지성',phone:'010-6633-9869',email:'nayopjs@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-12',name:'신선댁',items:'양파, 꿀고구마, 거창 사과, 고사리',link:'',contact:'김소영',phone:'010-4804-3689',email:'codesyk@naver.com',progress:'1차 소통 희망',memo:'연락 무시 중이심. 전화 1분 이상 이어가지 않으심 - 희망 안 하시는 것 같음.',contract:''},
+  {date:'2026-05-11',name:'싱싱보따리',items:'의성 햇마늘, 통영 생굴, 청송 사과, 황금사과',link:'https://naver.me/ximvct10',contact:'김태혁',phone:'010-9762-7662',email:'audqkrdl113@naver.com',progress:'2차 소통 중',memo:'',contract:'계약 진행중'},
+  {date:'2026-05-11',name:'청정지역',items:'산양산삼',link:'https://kko.to/WJFsuBpkh4',contact:'안재혁',phone:'010-5728-8262',email:'passid12@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-11',name:'제아파머스',items:'품목 확인 필요',link:'없음',contact:'이원기',phone:'010-3121-3762',email:'wk31213762@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-10',name:'KOOK(저염맛간장)',items:'저염 맛간장',link:'https://m.smartstore.naver.com/joyboy-shop',contact:'김다미',phone:'010-6292-0444',email:'mukkum_ntech@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-10',name:'가락시장 일따라청과',items:'청과물 도매',link:'https://open.kakao.com/o/g3Z6FaCf',contact:'조성진',phone:'010-6218-3409',email:'chsj720812@naver.com',progress:'1차 소통 완료(조건맞지않음)',memo:'6/9: 진행 원치 않으시는 듯, 소통 중 전화 끊으심. 문자 남겨놓음.',contract:''},
+  {date:'2026-05-09',name:'산수식품',items:'뭉글이 순두부',link:'',contact:'민상식',phone:'010-6211-4731',email:'ss31280@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-08',name:'올유원',items:'품목 확인 필요(참송이버섯)',link:'',contact:'박상수',phone:'010-4323-1903',email:'pss2118@nate.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-08',name:'오설우',items:'한우세트',link:'',contact:'이도현',phone:'010-5272-8400',email:'kkcw8400@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-08',name:'에프비즈',items:'홍시',link:'없음',contact:'조민호',phone:'010-6424-9426',email:'Yoshimits@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-07',name:'승원농원',items:'품목 확인 필요',link:'',contact:'',phone:'010-6409-8748',email:'heoo1007@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-07',name:'싱싱행',items:'밤, 밤호박',link:'상품소개서 작성중',contact:'임은영',phone:'010-9597-0621',email:'ceo@todayrn.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-07',name:'프리미엄당뚝심쌀',items:'혈당조절 쌀',link:'',contact:'이경수',phone:'010-4707-7178',email:'jjilisan@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-07',name:'라똥이네농장',items:'한라봉',link:'',contact:'오지현',phone:'010-6735-8025',email:'ojh9989@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-07',name:'쎄미팜',items:'당도 미국산 만다린 감귤',link:'',contact:'김민철',phone:'010-6278-6066',email:'mrkmc1004@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-06',name:'청날농원',items:'품목 확인 필요',link:'',contact:'심재환',phone:'010-3556-8826',email:'woghks900@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-06',name:'도도영농조합',items:'한라봉',link:'',contact:'양기문',phone:'010-7632-7777',email:'jejuomi@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-06',name:'신안농장',items:'미니밤호박, 단호박, 밤호박',link:'',contact:'강민우',phone:'010-7548-9542',email:'dak8210@daum.net',progress:'',memo:'',contract:''},
+  {date:'2026-05-06',name:'우리사랑건강원',items:'칡즙, 도라지배즙, 십전대보탕, 호박즙, 양파즙',link:'',contact:'윤형준',phone:'010-8570-3400',email:'yhjun1@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-06',name:'오르조팜',items:'애플망고, 감귤, 칸달로프멜론',link:'',contact:'박한나',phone:'010-2235-5386',email:'p01022355386@gmail.com',progress:'',memo:'추석 타겟',contract:''},
+  {date:'2026-05-06',name:'수산특별시',items:'품목 확인 필요',link:'',contact:'김대근',phone:'010-4240-5505',email:'eormszkxm@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-06',name:'팔구수산',items:'석화, 가리비',link:'',contact:'김민승',phone:'010-3839-7868',email:'idsingle1@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-05',name:'주식회사디앤글로벌/보배진',items:'품목 확인 필요',link:'',contact:'이인성',phone:'010-5850-4678',email:'ici31707@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-05',name:'프리셀(2)',items:'상추, 오이, 양상추, 토마토',link:'',contact:'손소희',phone:'010-4105-8734',email:'shson@netogreenkr.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-05',name:'루피너리',items:'루핀콩 쉐이크, 루핀 생분말, 루핀 볶음 분말',link:'',contact:'길수지',phone:'010-5159-6397',email:'altalk0618@naver.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-05',name:'에스티리테일',items:'한우',link:'',contact:'김태성',phone:'010-8961-9242',email:'ktsung1029@gmail.com',progress:'',memo:'',contract:''},
+  {date:'2026-05-05',name:'큐브송이',items:'무농약 참송이',link:'',contact:'정은섭',phone:'010-3309-5335',email:'yinxie740905@daum.net',progress:'',memo:'',contract:''}
+];
+
+var VS_STATUS_MAP = {
+  '계약 진행중': {cls:'contract', label:'계약 진행중'},
+  '런칭 완료': {cls:'launched', label:'런칭 완료'},
+  '2차 소통 중': {cls:'comm2', label:'2차 소통 중'},
+  '1차 소통 완료': {cls:'comm1', label:'1차 소통 완료'},
+  '1차 소통 완료(조건맞지않음)': {cls:'comm1bad', label:'조건불일치'},
+  '1차 소통 희망': {cls:'want', label:'1차 소통 희망'}
+};
+
+var vsActiveFilter = 'all';
+var vsCurrentTab = 'vtable';
+
+function vsGetEffectiveStatus(d) {
+  if (d.contract) return d.contract;
+  if (d.progress) return d.progress;
+  return '';
+}
+
+function vsBadge(d) {
+  var s = vsGetEffectiveStatus(d);
+  var m = VS_STATUS_MAP[s];
+  if (!m) return '<span class="vs-badge pending">미소통</span>';
+  return '<span class="vs-badge ' + m.cls + '">' + m.label + '</span>';
+}
+
+function vsLink(link) {
+  if (!link) return '-';
+  var lower = link.toLowerCase();
+  if (lower.startsWith('http') || lower.startsWith('www.') || lower.includes('.co.kr') || lower.includes('.com') || lower.includes('.kr')) {
+    var href = lower.startsWith('http') ? link : 'https://' + link;
+    return '<a class="vs-link" href="' + href + '" target="_blank" rel="noopener">🔗 링크</a>';
+  }
+  return '<span style="font-size:12px;color:#888">' + link + '</span>';
+}
+
+function vsEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function vsRender() {
+  var q = (document.getElementById('vs-search').value || '').toLowerCase();
+  var rows = VS_DATA.filter(function(d) {
+    if (vsActiveFilter !== 'all') {
+      var s = vsGetEffectiveStatus(d);
+      if (vsActiveFilter === 'pending') { if (s) return false; }
+      else { if (s !== vsActiveFilter) return false; }
+    }
+    if (q) {
+      var hay = (d.name + d.items + d.contact + d.email + d.phone).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+
+  var tbody = document.getElementById('vs-tbody');
+  var empty = document.getElementById('vs-empty');
+  var count = document.getElementById('vs-count');
+
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    count.textContent = '';
+    return;
+  }
+  empty.style.display = 'none';
+  count.textContent = '총 ' + rows.length + '개 업체';
+
+  var VS_STATUS_OPTS = [
+    {v:'',    l:'미소통'},
+    {v:'1차 소통 희망',               l:'1차 소통 희망'},
+    {v:'1차 소통 완료',               l:'1차 소통 완료'},
+    {v:'1차 소통 완료(조건맞지않음)', l:'조건불일치'},
+    {v:'2차 소통 중',                 l:'2차 소통 중'},
+    {v:'런칭 완료',                   l:'런칭 완료'},
+    {v:'계약 진행중',                 l:'계약 진행중'}
+  ];
+  tbody.innerHTML = rows.map(function(d) {
+    var idx = VS_DATA.indexOf(d);
+    var phone = d.phone ? '<a href="tel:' + d.phone.replace(/-/g,'') + '" style="color:#222;text-decoration:none;font-size:13px">' + vsEsc(d.phone) + '</a>' : '-';
+    var email = d.email ? '<a href="mailto:' + vsEsc(d.email) + '" class="vs-link">' + vsEsc(d.email) + '</a>' : '-';
+    var dateParts = d.date.split('-');
+    var dateStr = (dateParts[1]||'') + '.' + (dateParts[2]||'');
+    var memoBtn = d.memo ? '<button class="vs-action-btn" onclick="vsShowMemo('+idx+')" title="메모">💬</button>' : '';
+    var actionBtns = '<div class="vs-action-btns">' + memoBtn +
+      '<button class="vs-action-btn" onclick="vsOpenRegister('+idx+')" title="수정">✏️</button>' +
+      '<button class="vs-action-btn del" onclick="vsDeleteVendor('+idx+')" title="삭제">🗑️</button>' +
+      '</div>';
+    var curS = vsGetEffectiveStatus(d);
+    var sCls = vsStatusCls(curS);
+    var opts = VS_STATUS_OPTS.map(function(o){
+      return '<option value="'+o.v+'"'+(curS===o.v?' selected':'')+'>'+o.l+'</option>';
+    }).join('');
+    var progSel = '<select class="vs-prog-sel" data-s="'+sCls+'" onchange="vsSetProgress('+idx+',this.value,this)">'+opts+'</select>';
+    var quoteBtn = '<button class="vs-quote-btn" onclick="vsRegisterQuote('+idx+')">📋 등록</button>';
+    return '<tr>' +
+      '<td style="color:#888;font-size:12px">' + dateStr + '</td>' +
+      '<td><strong style="font-size:13px">' + vsEsc(d.name) + '</strong></td>' +
+      '<td style="font-size:12.5px;color:#444">' + vsEsc(d.items) + '</td>' +
+      '<td style="font-size:13px">' + vsEsc(d.contact||'-') + '</td>' +
+      '<td>' + phone + '</td>' +
+      '<td>' + email + '</td>' +
+      '<td style="text-align:center">' + vsLink(d.link) + '</td>' +
+      '<td>' + progSel + '</td>' +
+      '<td style="text-align:center">' + quoteBtn + '</td>' +
+      '<td>' + actionBtns + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function vsRenderFilters() {
+  var filters = [
+    {key:'all', label:'전체'},
+    {key:'계약 진행중', label:'계약 진행중'},
+    {key:'2차 소통 중', label:'2차 소통 중'},
+    {key:'런칭 완료', label:'런칭 완료'},
+    {key:'1차 소통 완료', label:'1차 소통 완료'},
+    {key:'1차 소통 희망', label:'1차 소통 희망'},
+    {key:'1차 소통 완료(조건맞지않음)', label:'조건불일치'},
+    {key:'pending', label:'미소통'}
+  ];
+  document.getElementById('vs-filters').innerHTML = filters.map(function(f) {
+    var cnt = f.key === 'all' ? VS_DATA.length : VS_DATA.filter(function(d) {
+      var s = vsGetEffectiveStatus(d);
+      return f.key === 'pending' ? !s : s === f.key;
+    }).length;
+    return '<button class="vs-filter' + (vsActiveFilter === f.key ? ' active' : '') + '" onclick="vsSetFilter(\'' + f.key.replace(/'/g,"\\'") + '\')">' + f.label + ' <span style="opacity:.6">(' + cnt + ')</span></button>';
+  }).join('');
+}
+
+function vsSetFilter(key) {
+  vsActiveFilter = key;
+  vsRenderFilters();
+  vsRender();
+}
+
+function vsRenderStats() {
+  var total = VS_DATA.length;
+  var contract = VS_DATA.filter(function(d){ return vsGetEffectiveStatus(d)==='계약 진행중'; }).length;
+  var comm2 = VS_DATA.filter(function(d){ return vsGetEffectiveStatus(d)==='2차 소통 중'; }).length;
+  var comm1 = VS_DATA.filter(function(d){ return vsGetEffectiveStatus(d)==='1차 소통 완료'; }).length;
+  var launched = VS_DATA.filter(function(d){ return vsGetEffectiveStatus(d)==='런칭 완료'; }).length;
+  var want = VS_DATA.filter(function(d){ return vsGetEffectiveStatus(d)==='1차 소통 희망'; }).length;
+  var pending = VS_DATA.filter(function(d){ return !vsGetEffectiveStatus(d); }).length;
+
+  document.getElementById('vs-stats').innerHTML = [
+    {cls:'', label:'총 업체', val:total, sub:'개 파트너사'},
+    {cls:'contract', label:'계약 진행중', val:contract, sub:'개 업체'},
+    {cls:'launched', label:'런칭 완료', val:launched, sub:'개 업체'},
+    {cls:'comm2', label:'2차 소통 중', val:comm2, sub:'개 업체'},
+    {cls:'comm1', label:'1차 소통 완료', val:comm1, sub:'개 업체'},
+    {cls:'want', label:'소통 희망', val:want, sub:'개 업체'},
+    {cls:'', label:'미소통', val:pending, sub:'개 대기중'}
+  ].map(function(s) {
+    return '<div class="vs-stat ' + s.cls + '">' +
+      '<div class="vs-stat-label">' + s.label + '</div>' +
+      '<div class="vs-stat-val">' + s.val + '</div>' +
+      '<div class="vs-stat-sub">' + s.sub + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── 캘린더 ──
+var vsCalYear = 2026;
+var vsCalMonth = 5; // 0-indexed: 5 = 6월
+var vsCalSelected = null;
+var VS_DOT_COLORS = {
+  '계약 진행중':'#22c55e','런칭 완료':'#a855f7','2차 소통 중':'#3b82f6',
+  '1차 소통 완료':'#06b6d4','1차 소통 희망':'#f59e0b','1차 소통 완료(조건맞지않음)':'#9ca3af'
+};
+
+function vsDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function vsCalBuildMap() {
+  var m = {};
+  VS_DATA.forEach(function(d){ if(!m[d.date]) m[d.date]=[]; m[d.date].push(d); });
+  return m;
+}
+
+function vsCalRender() {
+  var dateMap = vsCalBuildMap();
+  var todayStr = vsDateStr(new Date());
+  var firstDay = new Date(vsCalYear, vsCalMonth, 1);
+  var daysInMonth = new Date(vsCalYear, vsCalMonth + 1, 0).getDate();
+  var startDow = firstDay.getDay(); // 0=일
+  var MONTH_KO = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+
+  // 셀 배열 구성 (42칸 = 6행×7열)
+  var cells = [];
+  for (var i = 0; i < startDow; i++) {
+    cells.push({d: new Date(vsCalYear, vsCalMonth, 1 - startDow + i), other: true});
+  }
+  for (var day = 1; day <= daysInMonth; day++) {
+    cells.push({d: new Date(vsCalYear, vsCalMonth, day), other: false});
+  }
+  var next = 1;
+  while (cells.length < 42) { cells.push({d: new Date(vsCalYear, vsCalMonth+1, next++), other: true}); }
+
+  var WDAYS = [
+    {k:'일',c:'sun'},{k:'월',c:''},{k:'화',c:''},{k:'수',c:''},{k:'목',c:''},{k:'금',c:''},{k:'토',c:'sat'}
+  ];
+
+  var html = '<div class="vs-cal">' +
+    '<div class="vs-cal-nav">' +
+      '<button class="vs-cal-nav-btn" onclick="vsCalPrev()">‹</button>' +
+      '<span class="vs-cal-nav-title">' + vsCalYear + '년 ' + MONTH_KO[vsCalMonth] + '</span>' +
+      '<button class="vs-cal-nav-btn" onclick="vsCalNext()">›</button>' +
+    '</div>' +
+    '<div class="vs-cal-weekdays">' +
+      WDAYS.map(function(w){ return '<div class="vs-cal-weekday '+w.c+'">'+w.k+'</div>'; }).join('') +
+    '</div>' +
+    '<div class="vs-cal-days">';
+
+  cells.forEach(function(c) {
+    var ds = vsDateStr(c.d);
+    var vends = dateMap[ds] || [];
+    var isToday = ds === todayStr;
+    var isSel = ds === vsCalSelected;
+    var cls = 'vs-cal-day' + (c.other ? ' other-month' : '') + (vends.length ? ' has-vendors' : '') + (isToday ? ' today' : '') + (isSel ? ' selected' : '');
+    var dots = vends.slice(0, 7).map(function(v) {
+      var col = VS_DOT_COLORS[vsGetEffectiveStatus(v)] || '#e5e7eb';
+      return '<span class="vs-cal-dot" style="background:'+col+'"></span>';
+    }).join('');
+    var countHtml = vends.length ? '<div class="vs-cal-count">' + vends.length + '건</div>' : '';
+    var click = vends.length ? ' onclick="vsCalSelect(\''+ds+'\')"' : '';
+    html += '<div class="'+cls+'"'+click+'>' +
+      '<div class="vs-cal-dn">'+c.d.getDate()+'</div>' +
+      (dots ? '<div class="vs-cal-dots">'+dots+'</div>' : '') +
+      countHtml +
+    '</div>';
+  });
+
+  html += '</div></div>';
+  document.getElementById('vs-cal-container').innerHTML = html;
+  vsCalRenderDetail(dateMap);
+}
+
+function vsCalRenderDetail(dateMap) {
+  var el = document.getElementById('vs-cal-detail');
+  if (!vsCalSelected || !(dateMap[vsCalSelected]||[]).length) { el.innerHTML=''; return; }
+  var vends = dateMap[vsCalSelected];
+  var ds = vsCalSelected;
+  var parts = ds.split('-');
+  var label = parts[0]+'년 '+parseInt(parts[1])+'월 '+parseInt(parts[2])+'일';
+  var items = vends.map(function(v) {
+    var idx = VS_DATA.indexOf(v);
+    var col = VS_DOT_COLORS[vsGetEffectiveStatus(v)] || '#e5e7eb';
+    return '<div class="vs-cal-detail-item">' +
+      '<span class="vs-cal-detail-dot" style="background:'+col+'"></span>' +
+      '<div class="vs-cal-detail-info">' +
+        '<div class="vs-cal-detail-name">'+vsEsc(v.name)+'</div>' +
+        '<div class="vs-cal-detail-sub">'+vsEsc(v.items||'-')+(v.contact?' · '+vsEsc(v.contact):'')+(v.phone?' · '+vsEsc(v.phone):'')+'</div>' +
+      '</div>' +
+      vsBadge(v) +
+      '<div class="vs-cal-detail-actions">' +
+        (v.memo ? '<button class="vs-cal-detail-btn" onclick="vsShowMemo('+idx+')" title="메모">💬</button>' : '') +
+        '<button class="vs-cal-detail-btn" onclick="vsOpenRegister('+idx+')" title="수정">✏️</button>' +
+        '<button class="vs-cal-detail-btn" style="color:#ef4444" onclick="vsDeleteVendor('+idx+')" title="삭제">🗑️</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  el.innerHTML = '<div class="vs-cal-detail-wrap">' +
+    '<div class="vs-cal-detail-header"><span>📌 '+label+' — '+vends.length+'개 업체</span><button class="vs-cal-detail-close" onclick="vsCalSelect(null)">×</button></div>' +
+    '<div class="vs-cal-detail-list">'+items+'</div>' +
+  '</div>';
+}
+
+window.vsCalPrev = function() { vsCalMonth--; if(vsCalMonth<0){vsCalMonth=11;vsCalYear--;} vsCalSelected=null; vsCalRender(); };
+window.vsCalNext = function() { vsCalMonth++; if(vsCalMonth>11){vsCalMonth=0;vsCalYear++;} vsCalSelected=null; vsCalRender(); };
+window.vsCalSelect = function(ds) { vsCalSelected = (vsCalSelected===ds) ? null : ds; vsCalRender(); };
+
+function vsShowMemo(idx) {
+  var d = VS_DATA[idx];
+  if (!d) return;
+  document.getElementById('vs-memo-name').textContent = d.name;
+  document.getElementById('vs-memo-text').textContent = d.memo;
+  var popup = document.getElementById('vs-memo-popup');
+  popup.classList.add('open');
+  popup.style.top = '120px';
+  popup.style.left = '50%';
+  popup.style.transform = 'translateX(-50%)';
+}
+
+function vsCloseMemo() {
+  document.getElementById('vs-memo-popup').classList.remove('open');
+}
+
+window.vsSwitchTab = function(tab) {
+  vsCurrentTab = tab;
+  ['vtable','vtimeline'].forEach(function(t) {
+    document.getElementById('vs-tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('vs-panel-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'vtimeline') {
+    vsCalRender();
+    setTimeout(vsRenderCharts, 30);
+  }
+};
+
+window.vsSetFilter = vsSetFilter;
+window.vsShowMemo = vsShowMemo;
+window.vsCloseMemo = vsCloseMemo;
+
+// ── 업체 등록 / 수정 ──
+var vsEditingIdx = -1;
+
+window.vsOpenRegister = function(idx) {
+  vsEditingIdx = (idx !== undefined && idx >= 0) ? idx : -1;
+  var d = vsEditingIdx >= 0 ? VS_DATA[vsEditingIdx] : null;
+  document.getElementById('vs-modal-title').textContent = d ? '✏️ 업체 수정' : '🤝 업체 등록';
+  document.getElementById('vs-modal-submit-btn').textContent = d ? '저장하기' : '등록하기';
+  document.getElementById('vrf-name').value    = d ? d.name    : '';
+  document.getElementById('vrf-date').value    = d ? d.date    : new Date().toISOString().slice(0,10);
+  document.getElementById('vrf-items').value   = d ? d.items   : '';
+  document.getElementById('vrf-link').value    = d ? d.link    : '';
+  document.getElementById('vrf-contact').value = d ? d.contact : '';
+  document.getElementById('vrf-phone').value   = d ? d.phone   : '';
+  document.getElementById('vrf-email').value   = d ? d.email   : '';
+  document.getElementById('vrf-progress').value= d ? d.progress: '';
+  document.getElementById('vrf-contract').value= d ? d.contract: '';
+  document.getElementById('vrf-memo').value    = d ? d.memo    : '';
+  document.getElementById('vrf-name').style.borderColor = '';
+  document.getElementById('vs-reg-overlay').classList.add('open');
+  setTimeout(function(){ document.getElementById('vrf-name').focus(); }, 80);
+};
+window.vsCloseRegister = function() {
+  document.getElementById('vs-reg-overlay').classList.remove('open');
+};
+window.vsRegOverlayClick = function(e) {
+  if (e.target === document.getElementById('vs-reg-overlay')) vsCloseRegister();
+};
+window.vsSubmitRegister = function() {
+  var name = document.getElementById('vrf-name').value.trim();
+  var date = document.getElementById('vrf-date').value;
+  if (!name) { document.getElementById('vrf-name').focus(); document.getElementById('vrf-name').style.borderColor='#e5007e'; return; }
+  if (!date) { document.getElementById('vrf-date').focus(); return; }
+  var entry = {
+    date: date, name: name,
+    items:    document.getElementById('vrf-items').value.trim(),
+    link:     document.getElementById('vrf-link').value.trim(),
+    contact:  document.getElementById('vrf-contact').value.trim(),
+    phone:    document.getElementById('vrf-phone').value.trim(),
+    email:    document.getElementById('vrf-email').value.trim(),
+    progress: document.getElementById('vrf-progress').value,
+    contract: document.getElementById('vrf-contract').value,
+    memo:     document.getElementById('vrf-memo').value.trim()
+  };
+  if (vsEditingIdx >= 0) {
+    VS_DATA[vsEditingIdx] = entry;
+    vsShowToast('✅ 업체 정보가 수정되었습니다.');
+  } else {
+    VS_DATA.unshift(entry);
+    vsShowToast('✅ 업체가 등록되었습니다.');
+  }
+  vsCloseRegister();
+  vsRefreshAll();
+};
+window.vsDeleteVendor = function(idx) {
+  var d = VS_DATA[idx];
+  if (!d) return;
+  if (!confirm('[' + d.name + ']\n이 업체를 삭제하시겠습니까?')) return;
+  VS_DATA.splice(idx, 1);
+  vsRefreshAll();
+  vsShowToast('🗑️ 업체가 삭제되었습니다.');
+};
+function vsStatusCls(s) {
+  if (s === '계약 진행중') return 'contract';
+  if (s === '런칭 완료') return 'launched';
+  if (s === '2차 소통 중') return 'comm2';
+  if (s === '1차 소통 완료') return 'comm1';
+  if (s === '1차 소통 완료(조건맞지않음)') return 'comm1bad';
+  if (s === '1차 소통 희망') return 'want';
+  return 'pending';
+}
+window.vsSetProgress = function(idx, val, el) {
+  if (!VS_DATA[idx]) return;
+  VS_DATA[idx].progress = val;
+  VS_DATA[idx].contract = (val === '계약 진행중') ? '계약 진행중' : '';
+  if (el) el.setAttribute('data-s', vsStatusCls(val || ''));
+  vsRenderStats();
+  vsRenderFilters();
+};
+window.vsRegisterQuote = async function(idx) {
+  var d = VS_DATA[idx];
+  if (!d) return;
+  var name = d.name;
+  if (window.quoteAddVendorAndSwitch) await window.quoteAddVendorAndSwitch(name);
+  shellToggleGroup('quote');
+  setTimeout(function() {
+    if (window.quoteSwitchTab) window.quoteSwitchTab('add');
+    var sel = document.getElementById('add-vendor');
+    if (sel) {
+      sel.value = name;
+      if (sel.value !== name) {
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name; opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
+  }, 350);
+};
+function vsRefreshAll() {
+  vsRenderStats();
+  vsRenderFilters();
+  vsRender();
+  if (vsCurrentTab === 'vtimeline') { vsCalRender(); setTimeout(vsRenderCharts, 30); }
+}
+
+function vsShowToast(msg) {
+  var t = document.getElementById('vs-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ── 차트 ──
+var vsChartMonthly = null;
+var vsChartStatus  = null;
+
+function vsRenderCharts() {
+  if (typeof Chart === 'undefined') return;
+
+  /* 월별 집계 */
+  var monthMap = {};
+  VS_DATA.forEach(function(d) {
+    var m = d.date.slice(0,7);
+    if (!monthMap[m]) monthMap[m] = {contract:0,launched:0,comm2:0,comm1:0,want:0,bad:0,pending:0};
+    var s = vsGetEffectiveStatus(d);
+    if      (s === '계약 진행중')               monthMap[m].contract++;
+    else if (s === '런칭 완료')                 monthMap[m].launched++;
+    else if (s === '2차 소통 중')               monthMap[m].comm2++;
+    else if (s === '1차 소통 완료')             monthMap[m].comm1++;
+    else if (s === '1차 소통 희망')             monthMap[m].want++;
+    else if (s === '1차 소통 완료(조건맞지않음)') monthMap[m].bad++;
+    else                                         monthMap[m].pending++;
+  });
+
+  var months = Object.keys(monthMap).sort();
+  var labels = months.map(function(m) {
+    var p = m.split('-');
+    return p[0].slice(2) + '년 ' + parseInt(p[1]) + '월';
+  });
+  var COLORS = {contract:'#86efac',launched:'#c4b5fd',comm2:'#93c5fd',comm1:'#67e8f9',want:'#fde68a',bad:'#d1d5db',pending:'#e5e7eb'};
+
+  /* 누적 막대 차트 */
+  var ctx1 = document.getElementById('vs-chart-monthly');
+  if (vsChartMonthly) { vsChartMonthly.destroy(); vsChartMonthly = null; }
+  if (ctx1) {
+    vsChartMonthly = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {label:'계약 진행중',  data:months.map(function(m){return monthMap[m].contract}), backgroundColor:COLORS.contract},
+          {label:'런칭 완료',    data:months.map(function(m){return monthMap[m].launched}), backgroundColor:COLORS.launched},
+          {label:'2차 소통 중',  data:months.map(function(m){return monthMap[m].comm2}),    backgroundColor:COLORS.comm2},
+          {label:'1차 소통 완료',data:months.map(function(m){return monthMap[m].comm1}),    backgroundColor:COLORS.comm1},
+          {label:'소통 희망',    data:months.map(function(m){return monthMap[m].want}),     backgroundColor:COLORS.want},
+          {label:'조건불일치',   data:months.map(function(m){return monthMap[m].bad}),      backgroundColor:COLORS.bad},
+          {label:'미소통',       data:months.map(function(m){return monthMap[m].pending}),  backgroundColor:COLORS.pending}
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:8}},
+          tooltip:{callbacks:{label:function(c){return ' '+c.dataset.label+': '+c.parsed.y+'건';}}}
+        },
+        scales:{
+          x:{stacked:true,grid:{display:false},ticks:{font:{size:12}}},
+          y:{stacked:true,ticks:{stepSize:5,font:{size:11}},grid:{color:'#f0f0f0'}}
+        }
+      }
+    });
+  }
+
+  /* 도넛 차트 */
+  var ctx2 = document.getElementById('vs-chart-status');
+  if (vsChartStatus) { vsChartStatus.destroy(); vsChartStatus = null; }
+  if (ctx2) {
+    var SKEYS = ['계약 진행중','런칭 완료','2차 소통 중','1차 소통 완료','소통 희망','조건불일치','미소통'];
+    var SMAP  = {'계약 진행중':'contract','런칭 완료':'launched','2차 소통 중':'comm2','1차 소통 완료':'comm1','소통 희망':'want','조건불일치':'bad','미소통':'pending'};
+    var totals = {};
+    months.forEach(function(m){ Object.keys(monthMap[m]).forEach(function(k){ totals[k]=(totals[k]||0)+monthMap[m][k]; }); });
+    var sdata = SKEYS.map(function(k){ return totals[SMAP[k]]||0; }).filter(function(_,i){ return SKEYS[i]; });
+    var slabels = SKEYS.filter(function(k,i){ return sdata[i]>0; });
+    var sdataF  = sdata.filter(function(v){ return v>0; });
+    var scolors = SKEYS.filter(function(k,i){ return sdata[i]>0; }).map(function(k){ return COLORS[SMAP[k]]; });
+
+    vsChartStatus = new Chart(ctx2, {
+      type: 'doughnut',
+      data: {
+        labels: slabels,
+        datasets:[{
+          data: sdataF,
+          backgroundColor: scolors,
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{position:'bottom',labels:{font:{size:11},boxWidth:10,padding:6}},
+          tooltip:{callbacks:{label:function(c){return ' '+c.label+': '+c.parsed+'건 ('+Math.round(c.parsed/VS_DATA.length*100)+'%)'; }}}
+        }
+      }
+    });
+  }
+}
+
+// init
+document.getElementById('vs-last-updated').textContent = '기준일: 2026. 6. 20';
+vsRenderStats();
+vsRenderFilters();
+vsRender();
+})();
+</script>
+</div>
+</div>
+</div>
 </body>
 </html>
