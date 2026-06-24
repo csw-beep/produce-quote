@@ -1824,14 +1824,15 @@ textarea.vs-form-input{resize:vertical;min-height:82px;line-height:1.55}
 
       <!-- 직접 입력 모드 -->
       <div id="vs-bulk-text-panel" style="display:none">
-        <div style="margin-bottom:8px;font-size:12px;color:#666;background:#f9f9f9;border-radius:8px;padding:9px 12px;border:1px solid #eee;line-height:1.7">
-          한 행에 업체 1개, 콤마(,)로 구분해서 입력하세요. <strong style="color:#111">브랜드명</strong>은 필수입니다.<br>
-          <span style="color:#999;font-size:11.5px">DB유입날짜, 브랜드명, 업종(카테고리), 담당자명, 전화번호, 메일주소, 쇼핑몰링크, TM상태, 비고</span>
+        <div style="margin-bottom:8px;font-size:12px;color:#555;background:#f9f9f9;border-radius:8px;padding:9px 12px;border:1px solid #eee;line-height:1.8">
+          구글 시트에서 <strong style="color:#111">헤더 포함 전체 선택 후 복사(Ctrl+C)</strong> → 아래에 붙여넣기(Ctrl+V)<br>
+          <span style="color:#999;font-size:11px">컬럼 순서: 타임라인 · 업체명 · 주요 판매 품목 · 판매 링크 · 담당자명 · 전화번호 · 이메일 · 상태</span>
         </div>
         <div style="margin-bottom:6px;display:flex;gap:6px;align-items:center">
           <button onclick="vsBulkPaste()" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">📋 클립보드 붙여넣기</button>
+          <span style="font-size:11.5px;color:#bbb">헤더 행은 자동으로 제외됩니다</span>
         </div>
-        <textarea id="vrf-bulk-text" placeholder="2026-06-24, 홍길동식품, 가공식품, 홍길동, 010-0000-0000, email@naver.com, https://..., 미배정, 비고&#10;2026-06-23, 행복농원, 농수산물, 김철수, 010-1111-2222" style="width:100%;height:160px;border-radius:8px;border:1px solid #ddd;padding:10px 12px;font-size:12.5px;color:#111;outline:none;resize:vertical;font-family:inherit;line-height:1.7" spellcheck="false"></textarea>
+        <textarea id="vrf-bulk-text" placeholder="타임라인&#9;업체명&#9;주요 판매 품목&#9;판매 링크&#9;담당자명&#9;전화번호&#9;이메일&#9;상태&#10;2026. 6. 22&#9;환희농원&#9;플럼코트, 살구&#9;https://smartstore.naver.com/...&#9;한순희&#9;010-4867-1254&#9;moon_012@naver.com&#9;" style="width:100%;height:170px;border-radius:8px;border:1px solid #ddd;padding:10px 12px;font-size:12.5px;color:#111;outline:none;resize:vertical;font-family:inherit;line-height:1.7" spellcheck="false"></textarea>
       </div>
 
       <div id="vs-bulk-preview" style="margin-top:8px"></div>
@@ -4153,29 +4154,42 @@ function vsMapCsvRows(rows) {
   return result;
 }
 
-// ── 직접 입력 파싱 (콤마 구분, CSV 컬럼 순서 동일) ──
-// 순서: DB유입날짜, 브랜드명, 업종(카테고리), 담당자명, 전화번호, 메일주소, 쇼핑몰링크, TM상태, 비고
+// ── 직접 입력 파싱 (구글 시트 탭 구분, 헤더 자동 감지) ──
+// 컬럼: 타임라인 | 업체명 | 주요 판매 품목 | 판매 링크 | 담당자명 | 전화번호 | 이메일 | 상태
+function vsDateOnlySheet(raw) {
+  if (!raw) return new Date().toISOString().slice(0,10);
+  // "2026. 6. 22" 또는 "2026.6.22" → "2026-06-22"
+  var m = raw.match(/(\d{4})[.\s]+\s*(\d{1,2})[.\s]+\s*(\d{1,2})/);
+  if (m) return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+  // ISO 형식도 허용
+  return vsDateOnly(raw);
+}
+
+var SHEET_HEADER_KEYWORDS = ['타임라인','업체명','브랜드명','담당자명','전화번호','이메일','상태','판매 링크','주요'];
+
+function vsIsHeaderLine(parts) {
+  return parts.some(function(p){
+    return SHEET_HEADER_KEYWORDS.some(function(k){ return p.indexOf(k) >= 0; });
+  });
+}
+
 function vsBulkParseTextLine(line) {
-  var parts = line.split(',').map(function(s){ return s.trim(); });
-  // 첫 번째 값이 날짜처럼 보이면 날짜로 처리, 아니면 브랜드명으로
-  var offset = 0;
-  var dateVal = new Date().toISOString().slice(0,10);
-  if (parts[0] && /^\d{4}/.test(parts[0])) {
-    dateVal = vsDateOnly(parts[0]);
-    offset = 1;
-  }
-  var progress = vsTmToProgress(parts[offset+6] || '');
+  // 탭 우선, 없으면 콤마
+  var sep = line.indexOf('\t') >= 0 ? '\t' : ',';
+  var parts = line.split(sep).map(function(s){ return s.trim(); });
+  // 컬럼 순서: [0]타임라인 [1]업체명 [2]주요품목 [3]판매링크 [4]담당자명 [5]전화번호 [6]이메일 [7]상태
+  var progress = vsTmToProgress(parts[7] || '');
   return {
-    date:     dateVal,
-    name:     parts[offset+0] || '',
-    items:    parts[offset+1] || '',
-    contact:  parts[offset+2] || '',
-    phone:    parts[offset+3] || '',
-    email:    parts[offset+4] || '',
-    link:     parts[offset+5] || '',
+    date:     vsDateOnlySheet(parts[0]),
+    name:     parts[1] || '',
+    items:    parts[2] || '',
+    link:     parts[3] || '',
+    contact:  parts[4] || '',
+    phone:    parts[5] || '',
+    email:    parts[6] || '',
     progress: progress,
     contract: progress === '계약 진행중' ? '계약 진행중' : '',
-    memo:     parts[offset+7] || ''
+    memo:     ''
   };
 }
 
@@ -4323,13 +4337,12 @@ window.vsBulkPreview = function() {
   }
   // 직접 입력 모드
   var raw = (document.getElementById('vrf-bulk-text') || {}).value || '';
-  var lines = raw.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+  var lines = raw.split('\n').filter(function(l){ return l.trim().length > 0; });
   if (!lines.length) { alert('등록할 업체 정보를 입력해주세요.'); return; }
-  // 첫 줄이 헤더인지 감지 (브랜드명 | 업체명 포함 시 스킵)
-  var firstLower = lines[0].toLowerCase();
-  if (firstLower.includes('브랜드명') || firstLower.includes('업체명') || firstLower.includes('db 유입') || firstLower.includes('date')) {
-    lines = lines.slice(1);
-  }
+  // 헤더 행 자동 감지 및 제거 (탭/콤마 기준 파싱 후 키워드 확인)
+  var firstParts = lines[0].split(lines[0].indexOf('\t') >= 0 ? '\t' : ',').map(function(s){ return s.trim(); });
+  if (vsIsHeaderLine(firstParts)) lines = lines.slice(1);
+  if (!lines.length) { alert('데이터 행이 없습니다.'); return; }
   var entries = lines.map(vsBulkParseTextLine);
   vsBulkRenderPreview(entries);
 };
