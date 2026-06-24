@@ -1723,11 +1723,20 @@ textarea.vs-form-input{resize:vertical;min-height:82px;line-height:1.55}
 
 <!-- 업체 등록 모달 -->
 <div class="vs-modal-overlay" id="vs-reg-overlay" onclick="vsRegOverlayClick(event)">
-  <div class="vs-modal">
+  <div class="vs-modal" id="vs-modal-box">
     <div class="vs-modal-header">
       <span class="vs-modal-title" id="vs-modal-title">🤝 업체 등록</span>
-      <button class="vs-modal-close" onclick="vsCloseRegister()">×</button>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <div id="vs-modal-tabs" style="display:flex;gap:4px;background:#f5f5f5;border-radius:8px;padding:3px">
+          <button id="vs-mtab-single" onclick="vsModalTab('single')" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-weight:600;background:#fff;color:#111;box-shadow:0 1px 3px rgba(0,0,0,0.1)">단건</button>
+          <button id="vs-mtab-bulk" onclick="vsModalTab('bulk')" style="padding:5px 12px;border-radius:6px;border:none;font-size:12px;cursor:pointer;font-weight:500;background:transparent;color:#888">일괄</button>
+        </div>
+        <button class="vs-modal-close" onclick="vsCloseRegister()">×</button>
+      </div>
     </div>
+
+    <!-- 단건 등록 패널 -->
+    <div id="vs-panel-single">
     <div class="vs-form-grid">
       <div class="vs-form-group">
         <label class="vs-form-label">업체명<span>*</span></label>
@@ -1785,6 +1794,53 @@ textarea.vs-form-input{resize:vertical;min-height:82px;line-height:1.55}
       <button class="vs-btn vs-btn-ghost" onclick="vsCloseRegister()">취소</button>
       <button class="vs-btn vs-btn-primary" id="vs-modal-submit-btn" onclick="vsSubmitRegister()">등록하기</button>
     </div>
+    </div><!-- /vs-panel-single -->
+
+    <!-- 일괄 등록 패널 -->
+    <div id="vs-panel-bulk" style="display:none">
+      <!-- 입력 방식 탭 -->
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button id="vs-bulk-mode-csv" onclick="vsBulkMode('csv')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #3B6D11;background:#f0f7e8;color:#27500A;font-size:12.5px;font-weight:600;cursor:pointer">📂 CSV 파일 업로드</button>
+        <button id="vs-bulk-mode-text" onclick="vsBulkMode('text')" style="flex:1;padding:8px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#888;font-size:12.5px;font-weight:500;cursor:pointer">✏️ 직접 입력</button>
+      </div>
+
+      <!-- CSV 업로드 모드 -->
+      <div id="vs-bulk-csv-panel">
+        <div style="margin-bottom:8px;font-size:12px;color:#666;background:#f9f9f9;border-radius:8px;padding:9px 12px;border:1px solid #eee;line-height:1.7">
+          <strong>고객DB 유통대행서비스</strong> CSV 파일을 그대로 업로드하세요.<br>
+          <span style="color:#999">인식 컬럼: DB 유입 날짜/시간 · 브랜드명 · 업종(카테고리) · 담당자명/직급 · 전화번호 · 메일 주소 · 쇼핑몰 링크 · TM 상태 · 유입 비고</span>
+        </div>
+        <label id="vs-bulk-drop" for="vs-bulk-file-input" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:2px dashed #ddd;border-radius:10px;padding:28px 12px;cursor:pointer;background:#fff;transition:all .15s;text-align:center"
+          ondragover="event.preventDefault();this.style.borderColor='#3B6D11';this.style.background='#f0f7e8'"
+          ondragleave="this.style.borderColor='#ddd';this.style.background='#fff'"
+          ondrop="vsBulkDrop(event)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <span style="font-size:13.5px;font-weight:600;color:#333">CSV 파일을 여기에 드래그하거나 클릭해서 선택</span>
+          <span style="font-size:11.5px;color:#999">.csv 파일만 지원 · UTF-8 또는 EUC-KR</span>
+        </label>
+        <input type="file" id="vs-bulk-file-input" accept=".csv" style="display:none" onchange="vsBulkFileLoad(this)"/>
+        <div id="vs-bulk-file-info" style="margin-top:6px;font-size:12px;color:#3B6D11;display:none"></div>
+      </div>
+
+      <!-- 직접 입력 모드 -->
+      <div id="vs-bulk-text-panel" style="display:none">
+        <div style="margin-bottom:8px;font-size:12px;color:#666;background:#f9f9f9;border-radius:8px;padding:9px 12px;border:1px solid #eee;line-height:1.7">
+          한 행에 업체 1개, 콤마(,)로 구분해서 입력하세요. <strong style="color:#111">브랜드명</strong>은 필수입니다.<br>
+          <span style="color:#999;font-size:11.5px">DB유입날짜, 브랜드명, 업종(카테고리), 담당자명, 전화번호, 메일주소, 쇼핑몰링크, TM상태, 비고</span>
+        </div>
+        <div style="margin-bottom:6px;display:flex;gap:6px;align-items:center">
+          <button onclick="vsBulkPaste()" style="height:30px;padding:0 12px;border-radius:7px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">📋 클립보드 붙여넣기</button>
+        </div>
+        <textarea id="vrf-bulk-text" placeholder="2026-06-24, 홍길동식품, 가공식품, 홍길동, 010-0000-0000, email@naver.com, https://..., 미배정, 비고&#10;2026-06-23, 행복농원, 농수산물, 김철수, 010-1111-2222" style="width:100%;height:160px;border-radius:8px;border:1px solid #ddd;padding:10px 12px;font-size:12.5px;color:#111;outline:none;resize:vertical;font-family:inherit;line-height:1.7" spellcheck="false"></textarea>
+      </div>
+
+      <div id="vs-bulk-preview" style="margin-top:8px"></div>
+      <div class="vs-form-actions" style="margin-top:10px">
+        <button class="vs-btn vs-btn-ghost" onclick="vsCloseRegister()">취소</button>
+        <button class="vs-btn vs-btn-primary" onclick="vsBulkPreview()">미리보기 & 등록</button>
+      </div>
+    </div><!-- /vs-panel-bulk -->
+
   </div>
 </div>
 
@@ -3778,7 +3834,7 @@ function vsRender() {
     }).join('');
     var progSel = '<select class="vs-prog-sel" data-s="'+sCls+'" onchange="vsSetProgress('+idx+',this.value,this)">'+opts+'</select>';
     var quoteBtn = '<button class="vs-quote-btn" onclick="vsRegisterQuote('+idx+')">📋 등록</button>';
-    return '<tr>' +
+    return '<tr data-vs-idx="' + idx + '">' +
       '<td style="color:#888;font-size:12px">' + dateStr + '</td>' +
       '<td><strong style="font-size:13px">' + vsEsc(d.name) + '</strong></td>' +
       '<td style="font-size:12.5px;color:#444">' + vsEsc(d.items) + '</td>' +
@@ -3990,11 +4046,329 @@ window.vsCloseMemo = vsCloseMemo;
 
 // ── 업체 등록 / 수정 ──
 var vsEditingIdx = -1;
+var vsCurrentModalTab = 'single';
+var vsBulkInputMode = 'csv';   // 'csv' | 'text'
+var vsBulkParsedEntries = [];  // CSV 파싱 결과 보관
+
+// ── TM 상태 → 진행현황 매핑 (고객DB CSV 기준) ──
+var TM_STATUS_MAP = {
+  '미배정':     '',            // 미소통으로 처리
+  '통화시도':   '1차 소통 희망',
+  '통화완료':   '1차 소통 완료',
+  '통화불필요': '1차 소통 완료(조건맞지않음)'
+};
+
+// CSV 헤더 인식 키워드 (한글/영문 유연 매칭)
+var CSV_COL = {
+  date:     ['DB 유입 날짜', 'db유입날짜', '날짜', 'date'],
+  name:     ['브랜드명', '업체명', '브랜드', 'brand', 'name'],
+  items:    ['업종 (카테고리)', '업종(카테고리)', '업종', '주요품목', '카테고리', 'category', 'items'],
+  contact:  ['담당자명/직급', '담당자명', '담당자', 'manager', 'contact'],
+  phone:    ['전화번호', '연락처', 'phone', 'tel'],
+  email:    ['메일 주소', '메일주소', '이메일', 'email'],
+  link:     ['쇼핑몰 링크', '쇼핑몰링크', '판매링크', '링크', 'link', 'url'],
+  progress: ['TM 상태', 'tm상태', '진행현황', '상태', 'status', 'tm status'],
+  memo:     ['유입 비고', '유입비고', '비고', '메모', 'note', 'memo']
+};
+
+function vsColIdx(headers, key) {
+  var keywords = CSV_COL[key] || [];
+  for (var k = 0; k < keywords.length; k++) {
+    for (var h = 0; h < headers.length; h++) {
+      if (headers[h].trim().toLowerCase() === keywords[k].toLowerCase()) return h;
+    }
+  }
+  return -1;
+}
+
+function vsTmToProgress(tmVal) {
+  var v = (tmVal || '').trim();
+  if (TM_STATUS_MAP.hasOwnProperty(v)) return TM_STATUS_MAP[v];
+  // 직접 진행현황 값이 들어온 경우도 허용
+  var PROG_OPTS = ['계약 진행중','런칭 완료','2차 소통 중','1차 소통 완료','1차 소통 희망','1차 소통 완료(조건맞지않음)'];
+  for (var i = 0; i < PROG_OPTS.length; i++) { if (PROG_OPTS[i] === v) return v; }
+  return '';
+}
+
+function vsDateOnly(dateStr) {
+  if (!dateStr) return new Date().toISOString().slice(0,10);
+  // ISO 8601: "2026-06-23T22:42:30.518+00:00" → "2026-06-23"
+  var m = dateStr.match(/(\d{4}-\d{2}-\d{2})/);
+  if (m) return m[1];
+  return dateStr.slice(0,10);
+}
+
+// ── CSV 파서 (RFC 4180 호환, 쿼트 필드 지원) ──
+function vsParseCSV(text) {
+  var rows = [];
+  var row = [];
+  var col = '';
+  var inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    var next = text[i+1];
+    if (inQ) {
+      if (c === '"' && next === '"') { col += '"'; i++; }
+      else if (c === '"') { inQ = false; }
+      else { col += c; }
+    } else {
+      if (c === '"') { inQ = true; }
+      else if (c === ',') { row.push(col); col = ''; }
+      else if (c === '\n') { row.push(col); col = ''; rows.push(row); row = []; }
+      else if (c === '\r') { /* skip */ }
+      else { col += c; }
+    }
+  }
+  row.push(col);
+  if (row.some(function(v){ return v.trim(); })) rows.push(row);
+  return rows;
+}
+
+function vsMapCsvRows(rows) {
+  if (!rows.length) return [];
+  var headers = rows[0].map(function(h){ return h.replace(/^\uFEFF/,'').trim(); });
+  var idxMap = {};
+  Object.keys(CSV_COL).forEach(function(key){ idxMap[key] = vsColIdx(headers, key); });
+
+  var result = [];
+  for (var r = 1; r < rows.length; r++) {
+    var cells = rows[r];
+    function get(key) { var i = idxMap[key]; return (i >= 0 && cells[i] !== undefined) ? cells[i].trim() : ''; }
+    var name = get('name');
+    if (!name) continue;
+    var progress = vsTmToProgress(get('progress'));
+    result.push({
+      date:     vsDateOnly(get('date')),
+      name:     name,
+      items:    get('items'),
+      contact:  get('contact'),
+      phone:    get('phone'),
+      email:    get('email'),
+      link:     get('link'),
+      progress: progress,
+      contract: progress === '계약 진행중' ? '계약 진행중' : '',
+      memo:     get('memo')
+    });
+  }
+  return result;
+}
+
+// ── 직접 입력 파싱 (콤마 구분, CSV 컬럼 순서 동일) ──
+// 순서: DB유입날짜, 브랜드명, 업종(카테고리), 담당자명, 전화번호, 메일주소, 쇼핑몰링크, TM상태, 비고
+function vsBulkParseTextLine(line) {
+  var parts = line.split(',').map(function(s){ return s.trim(); });
+  // 첫 번째 값이 날짜처럼 보이면 날짜로 처리, 아니면 브랜드명으로
+  var offset = 0;
+  var dateVal = new Date().toISOString().slice(0,10);
+  if (parts[0] && /^\d{4}/.test(parts[0])) {
+    dateVal = vsDateOnly(parts[0]);
+    offset = 1;
+  }
+  var progress = vsTmToProgress(parts[offset+6] || '');
+  return {
+    date:     dateVal,
+    name:     parts[offset+0] || '',
+    items:    parts[offset+1] || '',
+    contact:  parts[offset+2] || '',
+    phone:    parts[offset+3] || '',
+    email:    parts[offset+4] || '',
+    link:     parts[offset+5] || '',
+    progress: progress,
+    contract: progress === '계약 진행중' ? '계약 진행중' : '',
+    memo:     parts[offset+7] || ''
+  };
+}
+
+// ── 모달 탭 전환 ──
+window.vsModalTab = function(tab) {
+  vsCurrentModalTab = tab;
+  document.getElementById('vs-panel-single').style.display = tab === 'single' ? '' : 'none';
+  document.getElementById('vs-panel-bulk').style.display   = tab === 'bulk'   ? '' : 'none';
+  var sBtn = document.getElementById('vs-mtab-single');
+  var bBtn = document.getElementById('vs-mtab-bulk');
+  if (tab === 'single') {
+    sBtn.style.background='#fff'; sBtn.style.color='#111'; sBtn.style.fontWeight='600'; sBtn.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)';
+    bBtn.style.background='transparent'; bBtn.style.color='#888'; bBtn.style.fontWeight='500'; bBtn.style.boxShadow='none';
+    document.getElementById('vs-modal-title').textContent = vsEditingIdx >= 0 ? '✏️ 업체 수정' : '🤝 업체 등록';
+  } else {
+    bBtn.style.background='#fff'; bBtn.style.color='#111'; bBtn.style.fontWeight='600'; bBtn.style.boxShadow='0 1px 3px rgba(0,0,0,0.1)';
+    sBtn.style.background='transparent'; sBtn.style.color='#888'; sBtn.style.fontWeight='500'; sBtn.style.boxShadow='none';
+    document.getElementById('vs-modal-title').textContent = '📋 업체 일괄 등록';
+    document.getElementById('vs-bulk-preview').innerHTML = '';
+    vsBulkParsedEntries = [];
+    vsEditingIdx = -1;
+    vsBulkMode('csv'); // 기본 CSV 탭
+  }
+};
+
+// ── 입력 방식 전환 ──
+window.vsBulkMode = function(mode) {
+  vsBulkInputMode = mode;
+  var csvPanel  = document.getElementById('vs-bulk-csv-panel');
+  var textPanel = document.getElementById('vs-bulk-text-panel');
+  var csvBtn    = document.getElementById('vs-bulk-mode-csv');
+  var textBtn   = document.getElementById('vs-bulk-mode-text');
+  if (mode === 'csv') {
+    csvPanel.style.display = ''; textPanel.style.display = 'none';
+    csvBtn.style.borderColor='#3B6D11'; csvBtn.style.background='#f0f7e8'; csvBtn.style.color='#27500A'; csvBtn.style.fontWeight='600';
+    textBtn.style.borderColor='#ddd'; textBtn.style.background='#fff'; textBtn.style.color='#888'; textBtn.style.fontWeight='500';
+  } else {
+    textPanel.style.display = ''; csvPanel.style.display = 'none';
+    textBtn.style.borderColor='#3B6D11'; textBtn.style.background='#f0f7e8'; textBtn.style.color='#27500A'; textBtn.style.fontWeight='600';
+    csvBtn.style.borderColor='#ddd'; csvBtn.style.background='#fff'; csvBtn.style.color='#888'; csvBtn.style.fontWeight='500';
+  }
+  document.getElementById('vs-bulk-preview').innerHTML = '';
+};
+
+// ── CSV 드래그 드롭 ──
+window.vsBulkDrop = function(e) {
+  e.preventDefault();
+  var label = document.getElementById('vs-bulk-drop');
+  label.style.borderColor='#ddd'; label.style.background='#fff';
+  var file = e.dataTransfer.files[0];
+  if (file) vsBulkReadFile(file);
+};
+
+// ── CSV 파일 선택 ──
+window.vsBulkFileLoad = function(input) {
+  var file = input.files[0];
+  if (file) vsBulkReadFile(file);
+};
+
+function vsBulkReadFile(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var text = e.target.result;
+    var rows = vsParseCSV(text);
+    vsBulkParsedEntries = vsMapCsvRows(rows);
+    var info = document.getElementById('vs-bulk-file-info');
+    info.style.display = '';
+    info.textContent = '📄 ' + file.name + ' — ' + vsBulkParsedEntries.length + '개 업체 인식됨';
+    // 바로 미리보기 렌더
+    vsBulkRenderPreview(vsBulkParsedEntries);
+  };
+  // 인코딩 자동 감지: UTF-8 BOM 없으면 EUC-KR 시도
+  reader.onerror = function(){ alert('파일 읽기에 실패했습니다.'); };
+  reader.readAsText(file, 'UTF-8');
+  reader.addEventListener('loadend', function(){}, {once:true});
+  // EUC-KR fallback: UTF-8 decode 실패 시 (깨진 글자 감지)
+  var reader2 = new FileReader();
+  reader2.onload = function(e2) {
+    var t2 = e2.target.result;
+    if (!t2.includes('브랜드명') && !t2.includes('담당자')) {
+      // 한글 깨짐 → EUC-KR 재시도
+      var r3 = new FileReader();
+      r3.onload = function(e3) {
+        var text3 = e3.target.result;
+        var rows3 = vsParseCSV(text3);
+        vsBulkParsedEntries = vsMapCsvRows(rows3);
+        vsBulkRenderPreview(vsBulkParsedEntries);
+      };
+      r3.readAsText(file, 'EUC-KR');
+    }
+  };
+  reader2.readAsText(file, 'UTF-8');
+}
+
+// ── 클립보드 붙여넣기 (직접입력 모드) ──
+window.vsBulkPaste = async function() {
+  try {
+    var text = await navigator.clipboard.readText();
+    document.getElementById('vrf-bulk-text').value = text;
+  } catch(e) {
+    alert('클립보드 접근 권한이 없습니다. 직접 붙여넣기(Ctrl+V) 해주세요.');
+  }
+};
+
+// ── 미리보기 렌더 ──
+function vsBulkRenderPreview(entries) {
+  var valid   = entries.filter(function(p){ return p.name; });
+  var skipped = entries.length - valid.length;
+  if (!valid.length) {
+    document.getElementById('vs-bulk-preview').innerHTML = '<div style="color:#ef4444;font-size:12.5px;padding:8px 0">업체명을 인식할 수 없습니다. 파일이나 컬럼 형식을 확인해주세요.</div>';
+    return;
+  }
+  var TH = 'padding:7px 10px;text-align:left;color:#888;font-size:11px;border-bottom:1px solid #eee;white-space:nowrap';
+  var TD = 'padding:6px 10px;border-bottom:1px solid #f5f5f5;';
+  var html = '<div style="font-size:12.5px;font-weight:600;color:#555;margin-bottom:6px">미리보기 — <strong>' + valid.length + '개</strong> 업체' + (skipped ? ' <span style="color:#ef4444;font-weight:400">('+skipped+'개 제외)</span>' : '') + '</div>';
+  html += '<div style="overflow-x:auto;border-radius:8px;border:1px solid #eee;max-height:180px;overflow-y:auto">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="background:#fafafa"><th style="'+TH+'">날짜</th><th style="'+TH+'">업체명</th><th style="'+TH+'">품목/업종</th><th style="'+TH+'">담당자</th><th style="'+TH+'">연락처</th><th style="'+TH+'">진행현황</th></tr></thead><tbody>';
+  valid.forEach(function(p) {
+    var progHtml = p.progress
+      ? '<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:#EAF3DE;color:#27500A;font-weight:600">'+vsEsc(p.progress)+'</span>'
+      : '<span style="color:#ccc">미소통</span>';
+    html += '<tr>' +
+      '<td style="'+TD+'color:#888">'+vsEsc(p.date)+'</td>' +
+      '<td style="'+TD+'color:#111;font-weight:500">'+vsEsc(p.name)+'</td>' +
+      '<td style="'+TD+'color:#555">'+vsEsc(p.items||'-')+'</td>' +
+      '<td style="'+TD+'color:#555">'+vsEsc(p.contact||'-')+'</td>' +
+      '<td style="'+TD+'color:#555">'+vsEsc(p.phone||'-')+'</td>' +
+      '<td style="'+TD+'">'+progHtml+'</td>' +
+    '</tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<button onclick="vsBulkCommit()" style="margin-top:10px;width:100%;height:38px;background:#3B6D11;color:#fff;border:none;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer">✅ ' + valid.length + '개 업체 등록하기</button>';
+  document.getElementById('vs-bulk-preview').innerHTML = html;
+  // 현재 파싱 결과를 전역에 보관 (commit에서 사용)
+  vsBulkParsedEntries = valid;
+}
+
+// ── 미리보기 버튼 (텍스트 모드용) ──
+window.vsBulkPreview = function() {
+  if (vsBulkInputMode === 'csv') {
+    if (!vsBulkParsedEntries.length) { alert('CSV 파일을 먼저 업로드해주세요.'); return; }
+    vsBulkRenderPreview(vsBulkParsedEntries);
+    return;
+  }
+  // 직접 입력 모드
+  var raw = (document.getElementById('vrf-bulk-text') || {}).value || '';
+  var lines = raw.split('\n').map(function(l){ return l.trim(); }).filter(function(l){ return l.length > 0; });
+  if (!lines.length) { alert('등록할 업체 정보를 입력해주세요.'); return; }
+  // 첫 줄이 헤더인지 감지 (브랜드명 | 업체명 포함 시 스킵)
+  var firstLower = lines[0].toLowerCase();
+  if (firstLower.includes('브랜드명') || firstLower.includes('업체명') || firstLower.includes('db 유입') || firstLower.includes('date')) {
+    lines = lines.slice(1);
+  }
+  var entries = lines.map(vsBulkParseTextLine);
+  vsBulkRenderPreview(entries);
+};
+
+// ── 실제 등록 ──
+window.vsBulkCommit = function() {
+  var entries = vsBulkParsedEntries.filter(function(e){ return e.name; });
+  if (!entries.length) return;
+  var existingNames = {};
+  VS_DATA.forEach(function(d){ existingNames[d.name] = true; });
+  var skipped = [];
+  var added = 0;
+  for (var i = entries.length - 1; i >= 0; i--) {
+    var e = entries[i];
+    if (existingNames[e.name]) { skipped.push(e.name); continue; }
+    VS_DATA.unshift({ date: e.date, name: e.name, items: e.items||'', link: e.link||'', contact: e.contact||'', phone: e.phone||'', email: e.email||'', progress: e.progress||'', contract: e.contract||'', memo: e.memo||'' });
+    existingNames[e.name] = true;
+    added++;
+  }
+  vsBulkParsedEntries = [];
+  vsCloseRegister();
+  vsRefreshAll();
+  if (skipped.length > 0 && added > 0) {
+    vsShowToast('✅ ' + added + '개 등록 / ⚠️ ' + skipped.length + '개 중복 제외');
+  } else if (added > 0) {
+    vsShowToast('✅ ' + added + '개 업체가 등록되었습니다.');
+  } else {
+    vsShowToast('⚠️ 모두 이미 등록된 업체입니다. (' + skipped.length + '개 중복)');
+  }
+};
 
 window.vsOpenRegister = function(idx) {
   vsEditingIdx = (idx !== undefined && idx >= 0) ? idx : -1;
   var d = vsEditingIdx >= 0 ? VS_DATA[vsEditingIdx] : null;
-  document.getElementById('vs-modal-title').textContent = d ? '✏️ 업체 수정' : '🤝 업체 등록';
+  // 수정 모드이면 일괄 탭 숨기기
+  var bulkTabBtn = document.getElementById('vs-mtab-bulk');
+  if (bulkTabBtn) bulkTabBtn.style.display = d ? 'none' : '';
+  // 단건 탭으로 초기화 (vsEditingIdx 세팅 후 호출)
+  vsModalTab('single');
   document.getElementById('vs-modal-submit-btn').textContent = d ? '저장하기' : '등록하기';
   document.getElementById('vrf-name').value    = d ? d.name    : '';
   document.getElementById('vrf-date').value    = d ? d.date    : new Date().toISOString().slice(0,10);
@@ -4033,22 +4407,75 @@ window.vsSubmitRegister = function() {
     memo:     document.getElementById('vrf-memo').value.trim()
   };
   if (vsEditingIdx >= 0) {
+    var dupEdit = VS_DATA.some(function(d, i){ return i !== vsEditingIdx && d.name === name; });
+    if (dupEdit) {
+      var inp = document.getElementById('vrf-name');
+      inp.style.borderColor = '#e5007e'; inp.focus();
+      vsShowToast('⚠️ 이미 등록된 업체명입니다.');
+      return;
+    }
     VS_DATA[vsEditingIdx] = entry;
     vsShowToast('✅ 업체 정보가 수정되었습니다.');
   } else {
+    var dup = VS_DATA.some(function(d){ return d.name === name; });
+    if (dup) {
+      var inp2 = document.getElementById('vrf-name');
+      inp2.style.borderColor = '#e5007e'; inp2.focus();
+      vsShowToast('⚠️ 이미 등록된 업체명입니다.');
+      return;
+    }
     VS_DATA.unshift(entry);
     vsShowToast('✅ 업체가 등록되었습니다.');
   }
   vsCloseRegister();
   vsRefreshAll();
 };
+// ── 삭제 확인 (confirm 대신 인라인 확인 UI) ──
+var vsPendingDeleteIdx = -1;
+
 window.vsDeleteVendor = function(idx) {
   var d = VS_DATA[idx];
   if (!d) return;
-  if (!confirm('[' + d.name + ']\n이 업체를 삭제하시겠습니까?')) return;
+  // 이미 같은 행 확인 중이면 취소
+  if (vsPendingDeleteIdx === idx) { vsCancelDelete(); return; }
+  // 다른 행 확인 중이었으면 먼저 취소
+  if (vsPendingDeleteIdx >= 0) vsCancelDelete();
+  vsPendingDeleteIdx = idx;
+  // 해당 행에 확인 UI 주입
+  var rows = document.querySelectorAll('[data-vs-idx="' + idx + '"]');
+  rows.forEach(function(row) {
+    var existing = row.querySelector('.vs-del-confirm');
+    if (existing) return;
+    var bar = document.createElement('td');
+    bar.className = 'vs-del-confirm';
+    bar.colSpan = 99;
+    bar.style.cssText = 'background:#fff5f5;padding:6px 14px;border-bottom:1px solid #fecaca;';
+    bar.innerHTML =
+      '<span style="font-size:12.5px;color:#b91c1c;font-weight:500;margin-right:10px">🗑️ <strong>' + vsEsc(d.name) + '</strong> 을(를) 삭제할까요?</span>' +
+      '<button onclick="vsConfirmDelete(' + idx + ')" style="height:28px;padding:0 14px;border-radius:6px;border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:600;cursor:pointer;margin-right:6px">삭제</button>' +
+      '<button onclick="vsCancelDelete()" style="height:28px;padding:0 12px;border-radius:6px;border:1px solid #ddd;background:#fff;color:#555;font-size:12px;cursor:pointer">취소</button>';
+    // 행 다음에 확인 행 삽입
+    var tr = document.createElement('tr');
+    tr.id = 'vs-del-bar-' + idx;
+    tr.appendChild(bar);
+    if (row.parentNode) row.parentNode.insertBefore(tr, row.nextSibling);
+  });
+};
+
+window.vsConfirmDelete = function(idx) {
+  vsPendingDeleteIdx = -1;
+  var bar = document.getElementById('vs-del-bar-' + idx);
+  if (bar) bar.remove();
+  if (!VS_DATA[idx]) return;
   VS_DATA.splice(idx, 1);
   vsRefreshAll();
   vsShowToast('🗑️ 업체가 삭제되었습니다.');
+};
+
+window.vsCancelDelete = function() {
+  var bar = document.getElementById('vs-del-bar-' + vsPendingDeleteIdx);
+  if (bar) bar.remove();
+  vsPendingDeleteIdx = -1;
 };
 function vsStatusCls(s) {
   if (s === '계약 진행중') return 'contract';
