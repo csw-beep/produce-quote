@@ -3042,6 +3042,8 @@ window.setMode = setMode;
 window.quoteSwitchTab = quoteSwitchTab;
 window.toggleSort = toggleSort;
 window.loadData = loadData;
+window.fbGet = fbGet;
+window.fbSet = fbSet;
 window.resetData = resetData;
 window.addVendor = addVendor;
 window.importData = importData;
@@ -4606,6 +4608,7 @@ window.vsBulkCommit = function() {
   }
   vsBulkParsedEntries = [];
   vsCloseRegister();
+  vsSaveData();
   vsRefreshAll();
   if (skipped.length > 0 && added > 0) {
     vsShowToast('✅ ' + added + '개 등록 / ⚠️ ' + skipped.length + '개 중복 제외');
@@ -4683,6 +4686,7 @@ window.vsSubmitRegister = function() {
     vsShowToast('✅ 업체가 등록되었습니다.');
   }
   vsCloseRegister();
+  vsSaveData();
   vsRefreshAll();
 };
 // ── 삭제 확인 (confirm 대신 인라인 확인 UI) ──
@@ -4723,6 +4727,7 @@ window.vsConfirmDelete = function(idx) {
   if (bar) bar.remove();
   if (!VS_DATA[idx]) return;
   VS_DATA.splice(idx, 1);
+  vsSaveData();
   vsRefreshAll();
   vsShowToast('🗑️ 업체가 삭제되었습니다.');
 };
@@ -4746,6 +4751,7 @@ window.vsSetProgress = function(idx, val, el) {
   VS_DATA[idx].progress = val;
   VS_DATA[idx].contract = (val === '계약 진행중') ? '계약 진행중' : '';
   if (el) el.setAttribute('data-s', vsStatusCls(val || ''));
+  vsSaveData();
   vsRenderStats();
   vsRenderFilters();
 };
@@ -4770,12 +4776,12 @@ window.vsRegisterQuote = async function(idx) {
 };
 // ── VS_DATA Firebase 저장/불러오기 ──
 async function vsSaveData() {
-  try { await fbSet('/vs_data', VS_DATA); } catch(e) { console.warn('VS_DATA 저장 실패', e); }
+  try { await window.fbSet('/vs_data', VS_DATA); } catch(e) { console.warn('VS_DATA 저장 실패', e); }
 }
 
 async function vsLoadData() {
   try {
-    var saved = await fbGet('/vs_data');
+    var saved = await window.fbGet('/vs_data');
     if (saved && Array.isArray(saved) && saved.length > 0) {
       VS_DATA = saved;
     } else if (VS_DATA.length > 0) {
@@ -4787,7 +4793,6 @@ async function vsLoadData() {
 }
 
 function vsRefreshAll() {
-  vsSaveData();
   vsRenderStats();
   vsRenderFilters();
   vsRender();
