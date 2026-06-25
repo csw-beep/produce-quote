@@ -2353,12 +2353,15 @@ window.cmpAcKey = function(e) {
 
 window.cmpAcSelect = function(name) {
   window._cmpName = name;
+  // 카드 리스트 자동 필터링 (IIFE 스코프 setter 경유)
+  if (window._setFilterName) window._setFilterName(name);
+  const fn = document.getElementById('filter-name');
+  if (fn) fn.value = name;
   const inp = document.getElementById('cmp-ac-input');
   if (inp) inp.value = name;
   cmpAcClose();
   cmpRefreshUnitSel();
   cmpUpdateSummary();
-  // 가격 입력창으로 포커스 이동
   setTimeout(() => {
     const pu = document.getElementById('cmp-sel-unit');
     if (pu) pu.focus();
@@ -2415,6 +2418,8 @@ function cmpUpdateSummary() {
 
 window.cmpClear = function() {
   window._cmpName = ''; window._cmpUnit = ''; window._cmpPrice = '';
+  if (window._setFilterName) window._setFilterName('');
+  const fn = document.getElementById('filter-name'); if (fn) fn.value = '';
   const ai = document.getElementById('cmp-ac-input');  if (ai) ai.value = '';
   const su = document.getElementById('cmp-sel-unit');  if (su) { su.value = ''; su.innerHTML = '<option value="">-- 단위 --</option>'; }
   const sp = document.getElementById('cmp-price-input'); if (sp) sp.value = '';
@@ -3013,6 +3018,8 @@ function startEditDate(id, el, currentDate){
 loadData();
 
 window.applyFilters = applyFilters;
+window._setFilterName = function(name) { filterName = name; };
+window._getFilterName = function() { return filterName; };
 window.applySearch = applySearch;
 window._quoteSearchFn = function(q){
   searchQ = q;
