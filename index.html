@@ -4288,6 +4288,7 @@ window.vsSwitchTab = function(tab) {
 window.vsSetFilter = vsSetFilter;
 window.vsShowMemo = vsShowMemo;
 window.vsCloseMemo = vsCloseMemo;
+window.vsRender = vsRender;
 
 // ── 업체 등록 / 수정 ──
 var vsEditingIdx = -1;
@@ -4775,20 +4776,56 @@ window.vsRegisterQuote = async function(idx) {
   }, 350);
 };
 // ── VS_DATA Firebase 저장/불러오기 ──
+var vsDataLoaded = false;      // Firebase 로드 완료 전에는 서버 데이터를 절대 덮어쓰지 않음
+var vsBackupDone = false;      // 세션당 1회, 저장 직전 상태를 /vs_data_backup 에 보관
+
 async function vsSaveData() {
-  try { await window.fbSet('/vs_data', VS_DATA); } catch(e) { console.warn('VS_DATA 저장 실패', e); }
+  if (!vsDataLoaded) {
+    console.warn('VS_DATA 로드 완료 전 저장 시도 — 차단됨');
+    if (typeof vsShowToast === 'function') vsShowToast('⚠️ 데이터 동기화 전입니다. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+  try {
+    // 이 세션에서 첫 저장 직전, 서버의 현재 데이터를 백업해 둠 (1단계 복구용)
+    if (!vsBackupDone) {
+      try {
+        var prev = await window.fbGet('/vs_data');
+        if (prev) await window.fbSet('/vs_data_backup', { savedAt: new Date().toISOString(), data: prev });
+        vsBackupDone = true;
+      } catch(e) { console.warn('백업 실패(저장은 계속 진행)', e); }
+    }
+    await window.fbSet('/vs_data', VS_DATA);
+  } catch(e) { console.warn('VS_DATA 저장 실패', e); }
 }
 
 async function vsLoadData() {
   try {
     var saved = await window.fbGet('/vs_data');
-    if (saved && Array.isArray(saved) && saved.length > 0) {
-      VS_DATA = saved;
-    } else if (VS_DATA.length > 0) {
-      // Firebase에 데이터 없으면 현재 하드코딩 데이터를 최초 1회 업로드
-      await vsSaveData();
+    // Firebase가 배열을 객체({"0":.., "1":..}) 형태로 반환하는 경우 배열로 복원
+    if (saved && !Array.isArray(saved) && typeof saved === 'object') {
+      saved = Object.keys(saved)
+        .sort(function(a,b){ return Number(a) - Number(b); })
+        .map(function(k){ return saved[k]; })
+        .filter(Boolean);
     }
-  } catch(e) { console.warn('VS_DATA 로드 실패', e); }
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      VS_DATA = saved.filter(Boolean);
+      vsDataLoaded = true;
+    } else if (saved === null) {
+      // 서버가 '완전히 비어있음(null)'을 명시한 경우에만 최초 1회 시드 업로드
+      vsDataLoaded = true;
+      if (VS_DATA.length > 0) {
+        try { await window.fbSet('/vs_data', VS_DATA); } catch(e) { console.warn('시드 업로드 실패', e); }
+      }
+    } else {
+      // 알 수 없는 응답 → 절대 덮어쓰지 않고 저장 잠금 유지
+      console.warn('VS_DATA 응답 형식 이상 — 저장 잠금 유지', saved);
+      if (typeof vsShowToast === 'function') vsShowToast('⚠️ 서버 데이터를 읽지 못했습니다. 안전을 위해 저장이 잠겼습니다. 새로고침 해주세요.');
+    }
+  } catch(e) {
+    console.warn('VS_DATA 로드 실패 — 저장 잠금 유지', e);
+    if (typeof vsShowToast === 'function') vsShowToast('⚠️ 서버 연결 실패. 안전을 위해 저장이 잠겼습니다. 새로고침 해주세요.');
+  }
   vsRefreshAll();
 }
 
